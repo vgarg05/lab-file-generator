@@ -1,0 +1,42 @@
+# ── Secrets ───────────────────────────────────────────────────
+.env
+
+# ── Python cache ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# ── Virtual environment ───────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Pytest / coverage ─────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Build / dist ──────────────────────────────────────────────
+build/
+dist/
+*.egg-info/
+
+# ── Playwright browser binaries ───────────────────────────────
+playwright-browsers/
+
+# ── Generated output files ────────────────────────────────────
+*.docx
+plot.png
+
+# ── OS files ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor / IDE ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user

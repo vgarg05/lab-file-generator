@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Lab Assistant — Lab Documentation Platform</title>
+  <meta name="description" content="Generate complete college lab experiment documents with AI. Enter your aim, choose a language, and get a formatted Word file with theory, code, and terminal output." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- Mobile sidebar overlay -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-layout">
+
+  <!-- ══ SIDEBAR ═══════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <div class="brand-icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3h6l-1 8H10L9 3z"/><path d="M5.5 21c.5-4 4-6.5 6.5-6.5s6 2.5 6.5 6.5H5.5z"/>
+          <line x1="8" y1="9" x2="16" y2="9"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">AI Lab Assistant</div>
+        <div class="brand-sub">Lab Documentation Platform</div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="sidebar-nav">
+      <a class="nav-item active" href="#" id="nav-generate">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </span>
+        Generate Lab File
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </span>
+        My Files
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </span>
+        Templates
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </span>
+        Recent
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </span>
+        Settings
+      </a>
+    </nav>
+
+    <!-- Sidebar bottom cards -->
+    <div class="sidebar-bottom">
+      <div class="sb-card">
+        <div class="sb-card-title"><span class="sb-star">✦</span> Pro Tip</div>
+        <p class="sb-card-body">Provide clear experiment aims for better documentation results.</p>
+        <a href="#" class="sb-link">Learn More →</a>
+      </div>
+      <div class="sb-card">
+        <div class="sb-card-title">Need Help?</div>
+        <p class="sb-card-body">Check our documentation or contact support.</p>
+        <a href="#" class="sb-link">View Documentation ↗</a>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ══ MAIN AREA ══════════════════════════════════════════════ -->
+  <div class="main-area">
+
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <button class="hamburger-btn" id="hamburger" aria-label="Toggle sidebar">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="top-bar-right">
+        <div class="theme-toggle" role="group">
+          <button class="theme-btn active" id="light-btn" title="Light mode">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          </button>
+          <button class="theme-btn" id="dark-btn" title="Dark mode">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="user-chip">
+          <div class="user-avatar">V</div>
+          <span class="user-name">Vaibhav Garg</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      </div>
+    </header>
+
+    <!-- Workspace -->
+    <main class="workspace">
+      <div class="workspace-inner">
+
+        <!-- Hero -->
+        <div class="hero">
+          <div class="hero-text">
+            <div class="ai-badge">✦ AI-POWERED</div>
+            <h1 class="hero-heading">Generate <span class="grad-text">New Lab File</span></h1>
+            <p class="hero-sub">Create comprehensive lab documentation with AI assistance.</p>
+          </div>
+          <div class="hero-illus" aria-hidden="true">
+            <div class="dec-dot dot-yellow"></div>
+            <div class="dec-dot dot-purple"></div>
+            <div class="dec-dot dot-blue"></div>
+            <div class="illus-folder">
+              <div class="illus-doc">
+                <div class="doc-line"></div>
+                <div class="doc-line short"></div>
+                <div class="doc-line"></div>
+                <div class="doc-line short"></div>
+              </div>
+            </div>
+            <div class="illus-code">&lt;/&gt;</div>
+            <div class="illus-term">&gt;_</div>
+          </div>
+        </div>
+
+        <!-- Form Card -->
+        <div class="form-card">
+          <div class="form-card-hdr">
+            <div class="form-card-hdr-icon">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 3h6l-1 8H10L9 3z"/>
+                <path d="M5.5 21c.5-4 4-6.5 6.5-6.5s6 2.5 6.5 6.5H5.5z"/>
+                <line x1="8" y1="9" x2="16" y2="9"/>
+              </svg>
+            </div>
+            <h2 class="form-card-title">Experiment Details</h2>
+          </div>
+
+          <form id="lab-form" novalidate>
+
+            <!-- Row 1 -->
+            <div class="form-row-2">
+              <div class="f-group">
+                <label class="f-label" for="exp-number">Experiment Number</label>
+                <div class="f-wrap">
+                  <span class="f-icon f-icon-hash">#</span>
+                  <input type="number" id="exp-number" class="f-input" placeholder="e.g., 1" min="1" autocomplete="off" required />
+                </div>
+                <span class="f-helper-text">Used as the document title header (e.g., 'Experiment - 1').</span>
+              </div>
+              <div class="f-group">
+                <label class="f-label" for="language">Language</label>
+                <div class="f-wrap f-select-wrap">
+                  <span class="f-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="2" y1="12" x2="22" y2="12"/>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                  </span>
+                  <select id="language" class="f-select" required>
+                    <option value="" disabled selected>Select Language</option>
+                    <option value="Python">Python</option>
+                    <option value="C">C</option>
+                    <option value="C++">C++</option>
+                    <option value="Java">Java</option>
+                    <option value="JavaScript">JavaScript</option>
+                    <option value="Rust">Rust</option>
+                  </select>
+                  <span class="select-arrow">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Aim -->
+            <div class="f-group f-aim-group">
+              <label class="f-label" for="aim">Experiment Aim</label>
+              <div class="f-textarea-wrap">
+                <span class="f-textarea-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="3"/>
+                    <line x1="22" y1="12" x2="19" y2="12"/><line x1="5" y1="12" x2="2" y2="12"/>
+                    <line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/>
+                  </svg>
+                </span>
+                <textarea id="aim" class="f-textarea" placeholder="e.g., Write a program to implement Bubble Sort" maxlength="500" required></textarea>
+              </div>
+              <div class="char-row">
+                <span id="char-count" class="char-count">0 / 500</span>
+              </div>
+            </div>
+
+            <!-- Additional Instructions -->
+            <div class="f-group f-aim-group">
+              <label class="f-label" for="instructions">Additional Instructions (Optional)</label>
+              <div class="f-textarea-wrap">
+                <span class="f-textarea-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                  </svg>
+                </span>
+                <textarea id="instructions" class="f-textarea" placeholder="e.g., Explain the time complexity in the theory, or use recursion in the code." style="min-height: 70px;"></textarea>
+              </div>
+              <span class="f-helper-text">You can also copy-paste code snippets, custom functions, or formatting rules for the AI to include.</span>
+            </div>
+
+            <!-- Component cards -->
+            <div class="comp-section">
+              <span class="comp-section-label">Include in Lab File</span>
+              <div class="comp-grid">
+                <div class="comp-card selected" data-comp="theory">
+                  <div class="comp-icon-wrap theory-bg">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                  </div>
+                  <div class="comp-body">
+                    <div class="comp-title">Theory</div>
+                    <div class="comp-desc">Include relevant theory and explanations</div>
+                  </div>
+                  <div class="comp-chk">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                </div>
+                <div class="comp-card selected" data-comp="code">
+                  <div class="comp-icon-wrap code-bg">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round">
+                      <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                    </svg>
+                  </div>
+                  <div class="comp-body">
+                    <div class="comp-title">Source Code</div>
+                    <div class="comp-desc">Add well-commented source code</div>
+                  </div>
+                  <div class="comp-chk">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                </div>
+                <div class="comp-card selected" data-comp="terminal">
+                  <div class="comp-icon-wrap term-bg">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round">
+                      <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+                    </svg>
+                  </div>
+                  <div class="comp-body">
+                    <div class="comp-title">Terminal Output</div>
+                    <div class="comp-desc">Include expected output and explanations</div>
+                  </div>
+                  <div class="comp-chk">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Error toast -->
+            <div id="error-toast" role="alert" aria-live="assertive">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span id="error-msg"></span>
+            </div>
+
+            <!-- CTA -->
+            <button type="submit" id="generate-btn" disabled>
+              ✦ Generate Lab File →
+            </button>
+
+          </form>
+        </div>
+
+        <!-- Progress Card -->
+        <div id="progress-section" role="status" aria-label="Generation progress">
+          <div class="prog-title">Generating your lab file…</div>
+          <div class="steps-list">
+            <div class="step pending" id="step-1">
+              <div class="step-ind">1</div>
+              <span class="step-lbl">Generating theory &amp; code with Gemini…</span>
+            </div>
+            <div class="step pending" id="step-2">
+              <div class="step-ind">2</div>
+              <span class="step-lbl">Executing code locally…</span>
+            </div>
+            <div class="step pending" id="step-3">
+              <div class="step-ind">3</div>
+              <span class="step-lbl">Rendering terminal output…</span>
+            </div>
+            <div class="step pending" id="step-4">
+              <div class="step-ind">4</div>
+              <span class="step-lbl">Assembling Word document…</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Card -->
+        <div id="success-section" role="status">
+          <div class="suc-icon">🎉</div>
+          <div class="suc-text">
+            <div class="suc-title">Lab file generated successfully!</div>
+            <div class="suc-sub">Your Word document is ready to download.</div>
+          </div>
+          <div class="suc-actions">
+            <a id="download-btn" href="#" download>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download .docx
+            </a>
+            <button id="reset-btn" type="button">Generate Another</button>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="page-footer">
+          <span class="footer-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Powered by Gemini API
+          </span>
+          <span class="footer-sep">•</span>
+          <span class="footer-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+            </svg>
+            Piston API
+          </span>
+          <span class="footer-sep">•</span>
+          <span class="footer-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            python-docx
+          </span>
+        </footer>
+
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; display: inline-block; }
+
+  #terminal {
+    width: fit-content;
+    max-width: 800px;
+    display: inline-block;
+    background: #1e1e1e;        /* VS Code 2017 Dark charcoal background */
+    border-radius: 0;
+    overflow: hidden;
+    font-family: 'Consolas', 'Courier New', monospace; /* VS Code terminal font */
+    font-size: 12px;            /* VS Code terminal size */
+    line-height: 1.4;           /* VS Code terminal line height */
+    border: 2px solid #000000;  /* Solid black rectangular border */
+  }
+
+  .content {
+    padding: 10px 14px 12px;    /* Cleaner tighter padding */
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* PS C:\...\project> — light gray, normal weight */
+  .prompt-path {
+    color: #cccccc;
+    font-weight: normal;
+  }
+
+  /* python main.py — warm yellow command */
+  .prompt-cmd {
+    color: #ece181;
+    font-weight: normal;
+  }
+
+  /* program output lines — light gray, normal weight */
+  .output-text {
+    color: #cccccc;
+    font-weight: normal;
+  }
+</style>
+</head>
+<body>
+<div id="terminal">
+  <div class="content"><span class="prompt-path">{{PROMPT_PATH}}</span><span class="prompt-cmd">{{COMMAND}}</span>
+<span class="output-text">{{OUTPUT}}</span></div>
+</div>
+</body>
+</html>
