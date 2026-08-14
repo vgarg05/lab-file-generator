@@ -113,7 +113,10 @@ Based on the Experiment Aim, Theory Instructions, and Code Instructions:
 You MUST return a JSON object with exactly three keys:
 1. "theory"
    - 3 to 5 paragraphs of concise, textbook-style academic theory following the "Theory Instructions".
-   - Plain text only — no markdown, no bullet points, no headings.
+   - Plain text only — no markdown, no bullet points, no headings, no asterisks, no hash symbols.
+   - You MAY include mathematical formulas and equations using standard notation and Unicode symbols (e.g., Σ, μ, σ, ², ³, ≤, ≥, →, ∈, α, β, θ).
+   - Write each formula or equation on its own separate line for clarity (e.g., "slope (m) = Σ(xi - x̄)(yi - ȳ) / Σ(xi - x̄)²").
+   - If complexity analysis is requested, write it as: "Time Complexity: O(n²)" on its own line.
 2. "code"
    - Complete, self-contained, working {language} source code following the "Code Instructions" that fulfills the requested aim.
    - The program must produce visible output when executed.
