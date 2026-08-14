@@ -5,3 +5,13 @@ google-generativeai>=0.7.0
 requests>=2.31.0
 playwright>=1.44.0
 python-docx>=1.1.0
+
+# ── Scientific & ML packages (college lab experiments) ────────
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
+scipy
+sympy
+Pillow
