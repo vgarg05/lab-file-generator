@@ -73,7 +73,7 @@ def _take_screenshot(html: str) -> bytes:
     browser = _init_browser()
     context = browser.new_context(
         viewport={"width": 960, "height": 800},
-        device_scale_factor=2,
+        device_scale_factor=1.5,
     )
     page = context.new_page()
     page.set_content(html, wait_until="load")
