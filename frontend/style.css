@@ -162,7 +162,7 @@ button, input, select, textarea { font-family: inherit; }
 
 /* ── Main Area ──────────────────────────────────────────────── */
 .main-area {
-  margin-left: var(--sidebar-w);
+  margin-left: 0;
   flex: 1; min-width: 0;
   display: flex; flex-direction: column; height: 100vh;
 }

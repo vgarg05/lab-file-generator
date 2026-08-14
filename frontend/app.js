@@ -61,31 +61,6 @@ document.querySelectorAll('.comp-card').forEach(card => {
   });
 });
 
-// ── Hamburger / mobile sidebar ────────────────────────────────
-const hamburger = document.getElementById('hamburger');
-const sidebar   = document.getElementById('sidebar');
-const overlay   = document.getElementById('sidebar-overlay');
-
-hamburger.addEventListener('click', () => {
-  sidebar.classList.toggle('open');
-  overlay.classList.toggle('visible');
-});
-
-overlay.addEventListener('click', () => {
-  sidebar.classList.remove('open');
-  overlay.classList.remove('visible');
-});
-
-// ── Theme toggle ──────────────────────────────────────────────
-document.getElementById('light-btn').addEventListener('click', () => {
-  document.getElementById('light-btn').classList.add('active');
-  document.getElementById('dark-btn').classList.remove('active');
-});
-document.getElementById('dark-btn').addEventListener('click', () => {
-  document.getElementById('dark-btn').classList.add('active');
-  document.getElementById('light-btn').classList.remove('active');
-});
-
 // ── Step state helper ─────────────────────────────────────────
 function setStepState(index, state) {
   const el  = steps[index];
