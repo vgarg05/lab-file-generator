@@ -58,27 +58,6 @@ def _add_body_paragraph(doc: Document, text: str):
     _apply_tnr(run, 14, bold=False)
 
 
-def _add_formula_block(doc: Document, text: str):
-    """
-    Add a stacked ASCII formula block using Courier New monospace font.
-    Preserves all internal spaces and newlines so fraction bars (─) align correctly.
-    Each line of the formula is added as a separate run with explicit line breaks.
-    """
-    lines = text.splitlines()
-    para = doc.add_paragraph()
-    para.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    para.paragraph_format.space_before = Pt(6)
-    para.paragraph_format.space_after = Pt(6)
-
-    for i, line in enumerate(lines):
-        run = para.add_run(line)   # preserve leading spaces — do NOT strip
-        run.font.name = "Courier New"
-        run.font.size = Pt(12)
-        # Add line break after every line except the last
-        if i < len(lines) - 1:
-            run.add_break()
-
-
 def _add_inline_section(doc: Document, heading: str, body: str):
     """Add inline heading (16pt Bold) followed by body (14pt Regular) on the same line."""
     para = doc.add_paragraph()
@@ -170,16 +149,11 @@ def assemble_document(
 
     # ── Theory ────────────────────────────────────────────────────────────────
     _add_section_heading(doc, "Theory")
-    # Split on double newlines to get separate paragraphs / formula blocks.
-    # Formula blocks contain the ─ character (Unicode box-drawing dash).
-    # They are rendered in monospace Courier New to preserve alignment.
-    theory_paras = [p for p in theory.strip().split("\n\n") if p.strip()]
+    # Split on double newlines to get separate paragraphs
+    theory_paras = [p.strip() for p in theory.strip().split("\n\n") if p.strip()]
     if theory_paras:
         for p in theory_paras:
-            if "─" in p:                  # stacked ASCII fraction / formula block
-                _add_formula_block(doc, p)
-            else:
-                _add_body_paragraph(doc, p)
+            _add_body_paragraph(doc, p)
     else:
         _add_body_paragraph(doc, theory.strip())
 

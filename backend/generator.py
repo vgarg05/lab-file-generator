@@ -115,14 +115,7 @@ You MUST return a JSON object with exactly three keys:
    - 3 to 5 paragraphs of concise, textbook-style academic theory following the "Theory Instructions".
    - Plain text only — no markdown, no bullet points, no headings, no asterisks, no hash symbols.
    - You MAY include mathematical formulas and equations using standard notation and Unicode symbols (e.g., Σ, μ, σ, ², ³, ≤, ≥, →, ∈, α, β, θ).
-   - IMPORTANT: When writing fractions, NEVER use the slash (/) notation like "a/b". Instead, ALWAYS draw fractions in a vertical stacked layout using Unicode box-drawing dashes (─). Format every fraction exactly like this example:
-
-          Σ((xi - x̄)(yi - ȳ))
-     m =  ────────────────────
-               Σ(xi - x̄)²
-
-   - Each fraction must have: numerator on top line, a row of ─ characters as the fraction bar (matching the width of the longer of numerator/denominator), and denominator on the bottom line. Indent appropriately for readability.
-   - Write each formula block on its own separate lines with a blank line before and after it.
+   - Write each formula or equation on its own separate line for clarity (e.g., "slope (m) = Σ(xi - x̄)(yi - ȳ) / Σ(xi - x̄)²").
    - If complexity analysis is requested, write it as: "Time Complexity: O(n²)" on its own line.
 2. "code"
    - Complete, self-contained, working {language} source code following the "Code Instructions" that fulfills the requested aim.
