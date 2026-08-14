@@ -15,10 +15,49 @@ Requirements:
 
 import os
 import sys
+import re
 import subprocess
 import tempfile
 import shutil
 from pathlib import Path
+
+# ── Heavy packages that crash Render free tier (512 MB RAM limit) ─────────────
+# Key   = friendly package name shown to user
+# Value = list of regex patterns to detect in generated code
+HEAVY_PACKAGES: dict[str, list[str]] = {
+    "TensorFlow": [
+        r"import\s+tensorflow",
+        r"from\s+tensorflow",
+        r"import\s+tf\b",
+    ],
+    "PyTorch": [
+        r"import\s+torch\b",
+        r"from\s+torch",
+        r"import\s+torchvision",
+        r"import\s+torchaudio",
+    ],
+    "Keras (standalone)": [
+        r"import\s+keras\b",
+        r"from\s+keras",
+    ],
+    "Hugging Face Transformers": [
+        r"import\s+transformers",
+        r"from\s+transformers",
+    ],
+    "JAX": [
+        r"import\s+jax\b",
+        r"from\s+jax",
+        r"import\s+jaxlib",
+    ],
+    "PaddlePaddle": [
+        r"import\s+paddle\b",
+        r"from\s+paddle",
+    ],
+    "MXNet": [
+        r"import\s+mxnet",
+        r"import\s+mx\b",
+    ],
+}
 
 # Per-language config:
 #   filename  — what to save the source as
@@ -69,18 +108,38 @@ COMPILE_TIMEOUT = 30
 RUN_TIMEOUT = 30
 
 
+def _detect_heavy_package(code: str) -> str | None:
+    """
+    Scan code for imports of packages too heavy for the free-tier server.
+    Returns the package name if found, else None.
+    """
+    for package_name, patterns in HEAVY_PACKAGES.items():
+        for pattern in patterns:
+            if re.search(pattern, code):
+                return package_name
+    return None
+
+
 def run_code(code: str, language: str) -> dict:
     """
-    Execute code locally via subprocess.
+    Execute *code* in a temporary directory and return stdout/stderr.
 
-    Args:
-        code:     Source code string.
-        language: User-facing language name (e.g. "Python", "C++").
-
-    Returns:
-        dict with "stdout" (str) and "stderr" (str).
-        Empty stderr means the run was successful.
+    Returns a dict with keys:
+        stdout (str): Program output.
+        stderr (str): Error output (empty string on success).
+        plot_png (bytes | None): Plot image bytes if generated.
     """
+    # ── Heavy package check ───────────────────────────────────────────────────
+    heavy = _detect_heavy_package(code)
+    if heavy:
+        msg = (
+            f"[Server Notice] This experiment uses {heavy}, which requires\n"
+            f"more memory than available on the free server.\n"
+            f"Please run this experiment locally on your machine\n"
+            f"where {heavy} is installed."
+        )
+        return {"stdout": msg, "stderr": "", "plot_png": None}
+
     config = LANGUAGE_CONFIG.get(language)
     if config is None:
         return {

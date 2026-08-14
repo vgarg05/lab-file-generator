@@ -11,6 +11,7 @@ Run with:
 """
 
 import io
+import re
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -27,6 +28,38 @@ from backend.generator import generate_theory_and_code, fix_code
 from backend.executor import run_code
 from backend.renderer import render_terminal
 from backend.assembler import assemble_document
+
+# ── Dangerous aim keyword filter ────────────────────────────────────────────
+# Each entry: (regex_pattern, human_readable_reason)
+DANGEROUS_PATTERNS: list[tuple[str, str]] = [
+    (r"\brmtree\b",           "file/directory deletion commands (rmtree)"),
+    (r"\bshutil\.rm",         "file/directory deletion commands (shutil.rm)"),
+    (r"\bos\.remove\b",       "file deletion commands (os.remove)"),
+    (r"\bos\.system\b",       "direct OS shell execution (os.system)"),
+    (r"\bsubprocess\.call\b", "direct shell subprocess execution"),
+    (r"\bsubprocess\.run\b",  "direct shell subprocess execution"),
+    (r"\bsubprocess\.Popen\b","direct shell subprocess execution"),
+    (r"\bdrop\s+database\b",  "destructive database commands (DROP DATABASE)"),
+    (r"\bdrop\s+table\b",     "destructive database commands (DROP TABLE)"),
+    (r"/etc/passwd",          "access to sensitive system files (/etc/passwd)"),
+    (r"\brm\s+-rf\b",         "dangerous shell command (rm -rf)"),
+    (r"\bformat\s+[cCdDeEfF]:","disk formatting command"),
+    (r"\b__import__\b",       "dynamic import execution tricks"),
+    (r"\beval\s*\(",           "arbitrary code execution via eval()"),
+    (r"\bexec\s*\(",           "arbitrary code execution via exec()"),
+]
+
+
+def _validate_aim(aim: str) -> str | None:
+    """
+    Check the aim text for dangerous keywords.
+    Returns a human-readable reason string if blocked, else None.
+    """
+    aim_lower = aim.lower()
+    for pattern, reason in DANGEROUS_PATTERNS:
+        if re.search(pattern, aim_lower, re.IGNORECASE):
+            return reason
+    return None
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
@@ -81,13 +114,25 @@ def generate_experiment(req: GenerateRequest):
       4. python-docx → assemble DOCX
       5. Stream DOCX as file download response
     """
-    # ── Validate ──────────────────────────────────────────────────────────────
+    # ── Validate ──────────────────────────────────────────────────────────────────────
     if not req.aim.strip():
         raise HTTPException(status_code=400, detail="Aim cannot be empty.")
     if req.experiment_number < 1:
         raise HTTPException(status_code=400, detail="Experiment number must be ≥ 1.")
 
-    # ── Step 1: Generate theory + code ────────────────────────────────────────
+    # ── Aim safety check ────────────────────────────────────────────────────────────
+    blocked_reason = _validate_aim(req.aim)
+    if blocked_reason:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Your aim was not accepted because it contains {blocked_reason}. "
+                f"Please describe a standard programming experiment "
+                f"(e.g., 'Write a program to implement Bubble Sort')."
+            ),
+        )
+
+    # ── Step 1: Generate theory + code ───────────────────────────────────────────────
     try:
         content = generate_theory_and_code(req.aim, req.language, req.instructions)
     except Exception as exc:
