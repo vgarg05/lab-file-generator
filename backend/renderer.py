@@ -68,7 +68,13 @@ def render_terminal(output: str, language: str = "Python") -> bytes:
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 960, "height": 800})
+        # device_scale_factor=2 forces 2x (Retina) pixel density,
+        # producing a crisp high-resolution screenshot on all servers.
+        context = browser.new_context(
+            viewport={"width": 960, "height": 800},
+            device_scale_factor=2,
+        )
+        page = context.new_page()
         page.set_content(html, wait_until="load")
 
         terminal = page.locator("#terminal")
