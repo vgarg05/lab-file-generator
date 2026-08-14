@@ -185,6 +185,16 @@ def run_code(code: str, language: str) -> dict:
             f"Supported: {', '.join(LANGUAGE_CONFIG.keys())}",
         }
 
+    # ── Path correction patch for Matplotlib ──────────────────────────────────
+    if language == "Python":
+        # Force any plt.savefig("/tmp/plot.png") or similar paths to be just relative "plot.png"
+        # so they are saved in the current dynamic temporary execution directory (tmp_dir)
+        code = re.sub(
+            r'plt\.savefig\s*\(\s*["\'].*?plot\.png["\']',
+            'plt.savefig("plot.png"',
+            code,
+        )
+
     # Create a temporary directory for this execution
     tmp_dir = tempfile.mkdtemp(prefix="labgen_")
 
