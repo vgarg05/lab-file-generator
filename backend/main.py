@@ -10,6 +10,7 @@ Run with:
   uvicorn backend.main:app --reload
 """
 
+import asyncio
 import io
 import re
 from contextlib import asynccontextmanager
@@ -69,10 +70,12 @@ async def lifespan(app: FastAPI):
     """
     Warm up Chromium at server startup so the first user never
     waits for a cold-start browser launch during generation.
+    Runs _get_browser() in a thread executor because sync_playwright()
+    cannot be called directly inside the asyncio event loop.
     """
-    _get_browser()          # launches Chromium once in the background
-    yield                   # server is now running and serving requests
-                            # (browser stays alive until server shuts down)
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _get_browser)
+    yield  # server runs; browser stays alive until server shuts down
 
 app = FastAPI(title="Lab File Generator", version="1.0.0", lifespan=lifespan)
 
