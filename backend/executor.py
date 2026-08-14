@@ -188,11 +188,21 @@ def run_code(code: str, language: str) -> dict:
     # Create a temporary directory for this execution
     tmp_dir = tempfile.mkdtemp(prefix="labgen_")
 
+    # On Linux: make the temp directory and source file readable by all users
+    # (including the restricted 'nobody' subprocess user we set below).
+    # mkdtemp() creates with mode 700 by default — nobody cannot read it.
+    if sys.platform.startswith("linux"):
+        os.chmod(tmp_dir, 0o755)
+
     try:
         # ── Write source file ────────────────────────────────────────────
         src_path = os.path.join(tmp_dir, config["filename"])
         with open(src_path, "w", encoding="utf-8") as f:
             f.write(code)
+
+        # Make source file readable by nobody user on Linux
+        if sys.platform.startswith("linux"):
+            os.chmod(src_path, 0o644)
 
         # ── Compile (if needed) ──────────────────────────────────────────
         if config["compile"]:
