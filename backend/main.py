@@ -28,7 +28,7 @@ load_dotenv()
 # Import pipeline steps
 from backend.generator import generate_theory_and_code, fix_code
 from backend.executor import run_code
-from backend.renderer import render_terminal, _get_browser
+from backend.renderer import render_terminal, warmup_browser
 from backend.assembler import assemble_document
 
 # ── Dangerous aim keyword filter ────────────────────────────────────────────
@@ -70,12 +70,11 @@ async def lifespan(app: FastAPI):
     """
     Warm up Chromium at server startup so the first user never
     waits for a cold-start browser launch during generation.
-    Runs _get_browser() in a thread executor because sync_playwright()
-    cannot be called directly inside the asyncio event loop.
+    warmup_browser() dispatches to the dedicated playwright thread
+    internally, so it is safe to call directly from async context.
     """
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _get_browser)
-    yield  # server runs; browser stays alive until server shuts down
+    warmup_browser()   # blocks until Chromium is ready
+    yield              # server runs; browser stays alive until shutdown
 
 app = FastAPI(title="Lab File Generator", version="1.0.0", lifespan=lifespan)
 
