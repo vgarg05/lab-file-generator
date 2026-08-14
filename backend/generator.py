@@ -43,10 +43,10 @@ def _strip_code_fences(text: str) -> str:
 
 
 def generate_theory_and_code(
-    aim: str, language: str, instructions: str = "", theory_instructions: str = ""
+    aim: str, language: str, code_instructions: str = "", theory_instructions: str = ""
 ) -> dict:
     """
-    Generate the theory, code, and software used for the experiment.
+    Generate the theory, code, and software used for the experiment using the structured prompts.
 
     Returns:
         dict with keys "theory" (str), "code" (str), and "software" (str)
@@ -58,49 +58,84 @@ def generate_theory_and_code(
         else ""
     )
 
-    instructions_note = ""
-    if instructions.strip():
-        instructions_note = (
-            "\nIMPORTANT CUSTOM REQUIREMENTS:\n"
-            "You MUST adapt the generated code or theory according to these guidelines:\n"
-            f"- {instructions.strip()}\n"
-        )
+    prompt = f"""You are an AI assistant that generates complete college laboratory experiment files.
 
-    theory_instructions_note = ""
-    if theory_instructions.strip():
-        theory_instructions_note = (
-            "\nIMPORTANT THEORY GUIDELINES:\n"
-            "You MUST adapt the generated theory section to cover/include the following:\n"
-            f"- {theory_instructions.strip()}\n"
-        )
+The user provides three inputs:
 
-    prompt = f"""You are an assistant generating content for a college lab experiment document.
+### 1. Experiment Aim
+This describes the main experiment or programming task that needs to be completed.
 
-Experiment Aim : {aim}
-Programming Language : {language}
+### 2. Theory Instructions
+These instructions apply ONLY to the Theory section.
+Use them to determine:
+* Which concepts and definitions should be explained
+* The depth and level of explanation
+* Important formulas or equations
+* Algorithms or principles that should be discussed theoretically
+* Time and space complexity analysis
+* Best-case, average-case, and worst-case analysis when relevant
+* Examples, applications, advantages, disadvantages, or comparisons
+* Any specific theoretical concepts requested by the user
 
-Return a JSON object with exactly three keys:
+Do NOT use theory instructions to modify the implementation unless they explicitly contain an implementation requirement.
 
+### 3. Code Instructions
+These instructions apply ONLY to the Program/Implementation section.
+Use them to determine:
+* Programming language (specified as: {language})
+* Programming approach or algorithm
+* Required functions
+* Recursion vs. iteration
+* Input and output format
+* Variable/function naming requirements
+* Comments or documentation requirements
+* Specific code snippets or custom functions provided by the user
+* Formatting requirements
+* Constraints or edge cases
+* Any other implementation-specific requirements
+
+Do NOT use code instructions to unnecessarily modify the Theory section.
+
+### Generation Rules
+Based on the Experiment Aim, Theory Instructions, and Code Instructions:
+1. Generate the experiment according to the user's requested aim.
+2. Keep theoretical content and implementation content logically separate.
+3. Follow all relevant instructions provided by the user.
+4. If an instruction is not provided, use appropriate academic conventions.
+5. Do not invent requirements that conflict with the user's instructions.
+6. Ensure the generated theory is consistent with the generated code.
+7. If complexity is requested in the Theory Instructions, provide complexity analysis for the actual algorithm implemented.
+8. If the user provides code snippets, functions, equations, formatting rules, or other custom content, incorporate them where appropriate.
+9. Prefer clear, concise, college-level explanations rather than unnecessarily advanced explanations.
+10. Maintain consistent terminology between the Theory and Code sections.
+
+### Output JSON Format Requirements
+You MUST return a JSON object with exactly three keys:
 1. "theory"
-   - 3 to 5 paragraphs of concise, textbook-style academic theory.
-   - Explain the core concepts, algorithm steps (if applicable), and real-world relevance.
-   - Tone: formal, undergraduate computer science lab manual.
+   - 3 to 5 paragraphs of concise, textbook-style academic theory following the "Theory Instructions".
    - Plain text only — no markdown, no bullet points, no headings.
-
 2. "code"
-   - Complete, self-contained, working {language} source code that fulfils "{aim}".
+   - Complete, self-contained, working {language} source code following the "Code Instructions" that fulfills the requested aim.
    - The program must produce visible output when executed.
    - All print/output statements must output text that is flush to the left (do not put leading spaces, tabs, or indents inside print strings like "  Value: " unless explicitly formatting an aligned data table).
    - If the program generates any plots, charts, or figures (e.g., using matplotlib or seaborn), you MUST write 'import matplotlib; matplotlib.use("Agg")' BEFORE importing pyplot, and save the figure as 'plot.png' using 'plt.savefig("plot.png", bbox_inches="tight")' instead of using 'plt.show()'.
    - Raw source code only — no markdown code fences, no explanations.
    {java_note}
-
 3. "software"
    - A short, concise comma-separated string listing the software and tools used/required (e.g. compiler, interpreter, IDE, libraries, OS) according to the aim (e.g. "Python 3.8+, PyTorch, NumPy, VS Code", or "GCC Compiler, VS Code, Windows 10/11").
 
-{instructions_note}
-{theory_instructions_note}
-Return ONLY the JSON object, nothing else."""
+### Input
+Experiment Aim:
+{aim}
+
+Theory Instructions:
+{theory_instructions if theory_instructions.strip() else "(None provided. Use default college level computer science conventions)"}
+
+Code Instructions:
+{code_instructions if code_instructions.strip() else "(None provided. Use default college level computer science conventions)"}
+
+Generate the complete experiment while strictly respecting the separation between theoretical and implementation instructions, returning ONLY the JSON object, nothing else.
+"""
 
     response = _json_model.generate_content(prompt)
     data = json.loads(response.text)

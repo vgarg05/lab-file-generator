@@ -15,7 +15,7 @@ const charCount       = document.getElementById('char-count');
 const aimInput        = document.getElementById('aim');
 const expInput        = document.getElementById('exp-number');
 const langSelect      = document.getElementById('language');
-const instInput       = document.getElementById('instructions');
+const codeInstInput   = document.getElementById('code-instructions');
 const theoryInstInput = document.getElementById('theory-instructions');
 
 const steps = [
@@ -204,7 +204,7 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  const instructions     = instInput.value.trim();
+  const codeInstructions   = codeInstInput.value.trim();
   const theoryInstructions = theoryInstInput.value.trim();
 
   setLoading(true);
@@ -219,7 +219,7 @@ form.addEventListener('submit', async (e) => {
         experiment_number: experimentNumber,
         aim,
         language,
-        instructions,
+        code_instructions: codeInstructions,
         theory_instructions: theoryInstructions
       }),
     });
