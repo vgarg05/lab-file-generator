@@ -12,6 +12,7 @@ Run with:
 
 import io
 import re
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -26,7 +27,7 @@ load_dotenv()
 # Import pipeline steps
 from backend.generator import generate_theory_and_code, fix_code
 from backend.executor import run_code
-from backend.renderer import render_terminal
+from backend.renderer import render_terminal, _get_browser
 from backend.assembler import assemble_document
 
 # ── Dangerous aim keyword filter ────────────────────────────────────────────
@@ -63,7 +64,17 @@ def _validate_aim(aim: str) -> str | None:
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="Lab File Generator", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Warm up Chromium at server startup so the first user never
+    waits for a cold-start browser launch during generation.
+    """
+    _get_browser()          # launches Chromium once in the background
+    yield                   # server is now running and serving requests
+                            # (browser stays alive until server shuts down)
+
+app = FastAPI(title="Lab File Generator", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
