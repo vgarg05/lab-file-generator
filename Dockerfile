@@ -49,8 +49,8 @@ RUN python -m playwright install chromium
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 
-# ── Hugging Face Spaces requires port 7860 ───────────────────
-EXPOSE 7860
+# ── Render uses a dynamic $PORT environment variable ─────────
+EXPOSE 8000
 
 # ── Start the FastAPI server ──────────────────────────────────
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
