@@ -86,6 +86,7 @@ class GenerateRequest(BaseModel):
     aim: str
     language: str
     instructions: str = ""
+    theory_instructions: str = ""
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -134,7 +135,9 @@ def generate_experiment(req: GenerateRequest):
 
     # ── Step 1: Generate theory + code ───────────────────────────────────────────────
     try:
-        content = generate_theory_and_code(req.aim, req.language, req.instructions)
+        content = generate_theory_and_code(
+            req.aim, req.language, req.instructions, req.theory_instructions
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Content generation failed: {exc}")
 

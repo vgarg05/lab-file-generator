@@ -42,9 +42,11 @@ def _strip_code_fences(text: str) -> str:
     return text.strip()
 
 
-def generate_theory_and_code(aim: str, language: str, instructions: str = "") -> dict:
+def generate_theory_and_code(
+    aim: str, language: str, instructions: str = "", theory_instructions: str = ""
+) -> dict:
     """
-    Call Gemini to produce both theory and source code for the experiment.
+    Generate the theory, code, and software used for the experiment.
 
     Returns:
         dict with keys "theory" (str), "code" (str), and "software" (str)
@@ -62,6 +64,14 @@ def generate_theory_and_code(aim: str, language: str, instructions: str = "") ->
             "\nIMPORTANT CUSTOM REQUIREMENTS:\n"
             "You MUST adapt the generated code or theory according to these guidelines:\n"
             f"- {instructions.strip()}\n"
+        )
+
+    theory_instructions_note = ""
+    if theory_instructions.strip():
+        theory_instructions_note = (
+            "\nIMPORTANT THEORY GUIDELINES:\n"
+            "You MUST adapt the generated theory section to cover/include the following:\n"
+            f"- {theory_instructions.strip()}\n"
         )
 
     prompt = f"""You are an assistant generating content for a college lab experiment document.
@@ -89,6 +99,7 @@ Return a JSON object with exactly three keys:
    - A short, concise comma-separated string listing the software and tools used/required (e.g. compiler, interpreter, IDE, libraries, OS) according to the aim (e.g. "Python 3.8+, PyTorch, NumPy, VS Code", or "GCC Compiler, VS Code, Windows 10/11").
 
 {instructions_note}
+{theory_instructions_note}
 Return ONLY the JSON object, nothing else."""
 
     response = _json_model.generate_content(prompt)

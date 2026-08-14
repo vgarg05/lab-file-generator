@@ -16,6 +16,7 @@ const aimInput        = document.getElementById('aim');
 const expInput        = document.getElementById('exp-number');
 const langSelect      = document.getElementById('language');
 const instInput       = document.getElementById('instructions');
+const theoryInstInput = document.getElementById('theory-instructions');
 
 const steps = [
   document.getElementById('step-1'),
@@ -204,6 +205,7 @@ form.addEventListener('submit', async (e) => {
   }
 
   const instructions     = instInput.value.trim();
+  const theoryInstructions = theoryInstInput.value.trim();
 
   setLoading(true);
   showProgressCard();
@@ -213,7 +215,13 @@ form.addEventListener('submit', async (e) => {
     const response = await fetch('/generate', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ experiment_number: experimentNumber, aim, language, instructions }),
+      body:    JSON.stringify({
+        experiment_number: experimentNumber,
+        aim,
+        language,
+        instructions,
+        theory_instructions: theoryInstructions
+      }),
     });
 
     clearStepTimers();
