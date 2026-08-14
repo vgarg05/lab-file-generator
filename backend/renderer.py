@@ -3,12 +3,16 @@ renderer.py — Render terminal output as a PNG using Playwright.
 
 Injects the real project path, run command, and stdout into the
 terminal.html mockup, then screenshots it with headless Chromium.
+
+Performance: A single persistent Playwright + Chromium browser instance
+is shared across all requests. This avoids the 3-7 second cold-start
+penalty of launching a new browser for every generation.
 """
 
 import sys
 import textwrap
 from pathlib import Path
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, Browser, Playwright
 
 TEMPLATE_PATH = Path(__file__).parent / "templates" / "terminal.html"
 
@@ -24,6 +28,36 @@ LANGUAGE_COMMAND: dict[str, str] = {
     "JavaScript": "node main.js",
     "Rust": "rustc main.rs -o main.exe && main.exe",
 }
+
+# ── Persistent browser singleton ───────────────────────────────────────────────
+# Launched once on first use, reused for all subsequent requests.
+# Auto-reconnects if the browser crashes between requests.
+
+_pw: Playwright | None = None
+_browser: Browser | None = None
+
+
+def _get_browser() -> Browser:
+    """
+    Return the shared Chromium browser instance, (re)initializing if needed.
+    Thread-safety note: FastAPI runs sync routes in a threadpool — for this
+    use-case (single-process Render free tier), a module-level singleton is safe.
+    """
+    global _pw, _browser
+
+    # Re-initialize if browser has never been started or has crashed/disconnected
+    if _browser is None or not _browser.is_connected():
+        # Clean up stale playwright instance if present
+        if _pw is not None:
+            try:
+                _pw.stop()
+            except Exception:
+                pass
+
+        _pw = sync_playwright().start()
+        _browser = _pw.chromium.launch(headless=True)
+
+    return _browser
 
 
 def _escape_html(text: str) -> str:
@@ -66,20 +100,19 @@ def render_terminal(output: str, language: str = "Python") -> bytes:
         .replace("{{OUTPUT}}", _escape_html(cleaned_output))
     )
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        # device_scale_factor=2 forces 2x (Retina) pixel density,
-        # producing a crisp high-resolution screenshot on all servers.
-        context = browser.new_context(
-            viewport={"width": 960, "height": 800},
-            device_scale_factor=2,
-        )
-        page = context.new_page()
-        page.set_content(html, wait_until="load")
+    # Reuse the persistent browser — no cold-start penalty
+    browser = _get_browser()
+    context = browser.new_context(
+        viewport={"width": 960, "height": 800},
+        device_scale_factor=2,
+    )
+    page = context.new_page()
+    page.set_content(html, wait_until="load")
 
-        terminal = page.locator("#terminal")
-        png_bytes = terminal.screenshot()
+    terminal = page.locator("#terminal")
+    png_bytes = terminal.screenshot()
 
-        browser.close()
+    # Close context (frees page memory) but keep the browser alive
+    context.close()
 
     return png_bytes
