@@ -133,6 +133,19 @@ def generate_experiment(req: GenerateRequest):
             ),
         )
 
+    # ── Code instructions safety check ──────────────────────────────────────────────
+    if req.code_instructions.strip():
+        blocked_reason = _validate_aim(req.code_instructions)
+        if blocked_reason:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Your code instructions were not accepted because they contain "
+                    f"{blocked_reason}. Please provide standard programming guidelines "
+                    f"(e.g., 'Use recursion' or 'Format output as a table')."
+                ),
+            )
+
     # ── Step 1: Generate theory + code ───────────────────────────────────────────────
     try:
         content = generate_theory_and_code(

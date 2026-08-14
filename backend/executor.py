@@ -120,6 +120,33 @@ def _detect_heavy_package(code: str) -> str | None:
     return None
 
 
+# ── Dangerous code pattern scanner ────────────────────────────────────────────
+# Patterns that should NEVER appear in legitimate college lab code
+DANGEROUS_CODE_PATTERNS: list[tuple[str, str]] = [
+    (r"shutil\.rmtree",              "file/directory deletion (shutil.rmtree)"),
+    (r"shutil\.rm",                  "file/directory deletion (shutil.rm)"),
+    (r"os\.remove\s*\(",             "file deletion (os.remove)"),
+    (r"os\.unlink\s*\(",             "file deletion (os.unlink)"),
+    (r"os\.system\s*\(",             "direct OS shell execution (os.system)"),
+    (r"subprocess\.(call|run|Popen)","shell subprocess execution"),
+    (r"open\(.+,\s*[\"']w[\"']",     "arbitrary file write (open with 'w' mode)"),
+    (r"/etc/passwd",                 "access to sensitive system file (/etc/passwd)"),
+    (r"/etc/shadow",                 "access to sensitive system file (/etc/shadow)"),
+    (r"__import__\s*\(",             "dynamic import execution trick"),
+]
+
+
+def _detect_dangerous_code(code: str) -> str | None:
+    """
+    Scan generated code for dangerous patterns before execution.
+    Returns a human-readable reason string if found, else None.
+    """
+    for pattern, reason in DANGEROUS_CODE_PATTERNS:
+        if re.search(pattern, code, re.IGNORECASE):
+            return reason
+    return None
+
+
 def run_code(code: str, language: str) -> dict:
     """
     Execute *code* in a temporary directory and return stdout/stderr.
@@ -137,6 +164,16 @@ def run_code(code: str, language: str) -> dict:
             f"more memory than available on the free server.\n"
             f"Please run this experiment locally on your machine\n"
             f"where {heavy} is installed."
+        )
+        return {"stdout": msg, "stderr": "", "plot_png": None}
+
+    # ── Dangerous code check ──────────────────────────────────────────────────
+    dangerous = _detect_dangerous_code(code)
+    if dangerous:
+        msg = (
+            f"[Security Notice] The generated code contains {dangerous},\n"
+            f"which is blocked for safety reasons on this server.\n"
+            f"Please modify your aim to avoid system-level operations."
         )
         return {"stdout": msg, "stderr": "", "plot_png": None}
 
@@ -185,14 +222,25 @@ def run_code(code: str, language: str) -> dict:
                 }
 
         # ── Run ──────────────────────────────────────────────────────────
+        # On Linux (production server), run as restricted 'nobody' user
+        # to prevent the subprocess from accessing or modifying server files.
+        # On Windows (local dev), this parameter is not supported so it is skipped.
+        run_kwargs: dict = {
+            "cwd":            tmp_dir,
+            "capture_output": True,
+            "text":           True,
+            "timeout":        RUN_TIMEOUT,
+        }
+        if sys.platform.startswith("linux"):
+            try:
+                import pwd
+                nobody_uid = pwd.getpwnam("nobody").pw_uid
+                run_kwargs["user"] = nobody_uid
+            except (KeyError, PermissionError):
+                pass  # 'nobody' user not available — skip silently
+
         try:
-            run_result = subprocess.run(
-                config["run"],
-                cwd=tmp_dir,
-                capture_output=True,
-                text=True,
-                timeout=RUN_TIMEOUT,
-            )
+            run_result = subprocess.run(config["run"], **run_kwargs)
         except subprocess.TimeoutExpired:
             return {"stdout": "", "stderr": "Execution timed out (30s limit)."}
         except FileNotFoundError as exc:
