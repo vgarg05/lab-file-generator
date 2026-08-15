@@ -254,6 +254,16 @@ def run_code(code: str, language: str) -> dict:
         # On Linux (production server), run as restricted 'nobody' user
         # to prevent the subprocess from accessing or modifying server files.
         # On Windows (local dev), this parameter is not supported so it is skipped.
+        #
+        # IMPORTANT — Linux path rule:
+        # Linux does NOT search the current directory (cwd) for executables.
+        # Compiled binaries (C, C++, Rust) must be referenced as "./main.exe"
+        # not "main.exe", otherwise Linux raises FileNotFoundError.
+        # On Windows, "main.exe" works fine without the prefix.
+        run_cmd = list(config["run"])
+        if sys.platform.startswith("linux") and config.get("exe_name"):
+            run_cmd[0] = "./" + run_cmd[0]
+
         run_kwargs: dict = {
             "cwd":            tmp_dir,
             "capture_output": True,
@@ -269,7 +279,7 @@ def run_code(code: str, language: str) -> dict:
                 pass  # 'nobody' user not available — skip silently
 
         try:
-            run_result = subprocess.run(config["run"], **run_kwargs)
+            run_result = subprocess.run(run_cmd, **run_kwargs)
         except subprocess.TimeoutExpired:
             return {"stdout": "", "stderr": "Execution timed out (30s limit)."}
         except FileNotFoundError as exc:
