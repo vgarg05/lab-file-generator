@@ -190,7 +190,8 @@ form.addEventListener('submit', async (e) => {
         aim,
         language,
         code_instructions: codeInstructions,
-        theory_instructions: theoryInstructions
+        theory_instructions: theoryInstructions,
+        api_key: (document.getElementById('api-key-input')?.value || '').trim(),
       }),
     });
 

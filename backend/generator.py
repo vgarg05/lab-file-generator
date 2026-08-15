@@ -43,14 +43,32 @@ def _strip_code_fences(text: str) -> str:
 
 
 def generate_theory_and_code(
-    aim: str, language: str, code_instructions: str = "", theory_instructions: str = ""
+    aim: str, language: str, code_instructions: str = "", theory_instructions: str = "",
+    api_key: str | None = None,
 ) -> dict:
     """
     Generate the theory, code, and software used for the experiment using the structured prompts.
 
+    Args:
+        api_key: Optional user-provided Gemini API key. If given, overrides the system key
+                 so the request uses the user's own quota instead of the shared server quota.
+
     Returns:
         dict with keys "theory" (str), "code" (str), and "software" (str)
     """
+    # Use user-provided key if given, otherwise fall back to system env key
+    if api_key:
+        import google.generativeai as _genai
+        _genai.configure(api_key=api_key)
+        json_model = _genai.GenerativeModel(
+            model_name="gemini-3.1-flash-lite",
+            generation_config=_genai.types.GenerationConfig(
+                response_mime_type="application/json",
+                temperature=0.3,
+            ),
+        )
+    else:
+        json_model = _json_model   # shared system-key model
     java_note = (
         'IMPORTANT: Since the language is Java, the public class MUST be named "Main" '
         "so the file can be saved as Main.java and executed correctly."
@@ -140,7 +158,7 @@ Code Instructions:
 Generate the complete experiment while strictly respecting the separation between theoretical and implementation instructions, returning ONLY the JSON object, nothing else.
 """
 
-    response = _json_model.generate_content(prompt)
+    response = json_model.generate_content(prompt)
     data = json.loads(response.text)
 
     return {

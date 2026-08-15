@@ -100,6 +100,7 @@ class GenerateRequest(BaseModel):
     language: str
     code_instructions: str = ""
     theory_instructions: str = ""
+    api_key: str = ""   # optional user-supplied Gemini API key
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -162,7 +163,8 @@ def generate_experiment(req: GenerateRequest):
     # ── Step 1: Generate theory + code ───────────────────────────────────────────────
     try:
         content = generate_theory_and_code(
-            req.aim, req.language, req.code_instructions, req.theory_instructions
+            req.aim, req.language, req.code_instructions, req.theory_instructions,
+            api_key=req.api_key.strip() or None
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Content generation failed: {exc}")

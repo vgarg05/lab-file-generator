@@ -636,6 +636,66 @@ button, input, select, textarea { font-family: inherit; }
 .footer-item { display: inline-flex; align-items: center; gap: 5px; }
 .footer-sep  { color: var(--text-3); }
 
+/* ── Optional API Key Section ───────────────────────────────── */
+.api-key-section {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.api-key-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background var(--tr);
+}
+.api-key-summary::-webkit-details-marker { display: none; }
+.api-key-summary:hover { background: var(--border); }
+
+.api-key-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-light);
+  border: 1px solid rgba(124,58,237,0.2);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.api-key-body {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.api-key-hint {
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.api-key-hint a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.api-key-hint a:hover { opacity: 0.8; }
+
+
 /* ── Animations ─────────────────────────────────────────────── */
 @keyframes spin  { to { transform: rotate(360deg); } }
 @keyframes pulse {
