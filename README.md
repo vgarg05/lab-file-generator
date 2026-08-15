@@ -20,7 +20,7 @@ An AI-powered SaaS-style web tool that automatically generates complete, college
 
 | Layer              | Technology                          |
 |--------------------|-------------------------------------|
-| LLM                | Gemini 2.0 Flash (Google)           |
+| LLM                | Gemini 3.1 Flash Lite (Google)      |
 | Code Execution     | Local Subprocess (`.venv` Python)   |
 | Terminal Rendering | Playwright → HTML/CSS → PNG         |
 | Document Builder   | `python-docx`                       |
@@ -139,3 +139,10 @@ lab file generator/
 - Code is executed **locally** inside your `.venv` virtual environment — so packages like `numpy`, `torch`, `matplotlib`, and `sklearn` work out of the box if installed.
 - If generated code produces a `plot.png` (via `plt.savefig`), it is automatically embedded in the Word document under the Output section.
 - The `.docx` is built entirely in-memory — no temporary files are written to disk.
+
+---
+
+## ⚠️ Disclaimer
+
+This project was developed strictly for educational and portfolio demonstration purposes to explore LLM integration, automated code execution, and programmatic document assembly. It is not intended to bypass academic integrity policies.
+

@@ -2,104 +2,91 @@
 
 ## Overview
 
-Input: an experiment **aim** (e.g., "WAP to implement Bubble Sort") + target **language**.
-Output: a completed lab experiment document (DOCX/PDF) with Aim, Theory, Code, and Terminal Output sections filled in — for one experiment or batched across many, into a single lab file.
+**Input:** Experiment **Number**, Experiment **Aim**, **Language**, and optional **Additional Instructions**.  
+**Output:** A formatted `.docx` lab report containing **Aim**, **Software Used**, **Theory**, **Source Code**, and **Output** (VS Code Terminal screenshot + embedded Matplotlib plots if generated).
 
 ```
-Aim + Language
-      │
-      ▼
-[1] Content Generation (LLM)
-      │  → Theory text
-      │  → Source code
-      ▼
-[2] Code Execution (Sandbox)
-      │  → stdout / stderr
-      │  → retry loop on error
-      ▼
-[3] Terminal Rendering
-      │  → styled "terminal" PNG from output text
-      ▼
-[4] Document Assembly
-      │  → fill placeholders in template
-      │  → repeat 1-3 per experiment
-      ▼
-[5] Export
-      → DOCX → PDF (single lab file, multiple experiments)
+Aim + Language + Extra Instructions
+             │
+             ▼
+[1] Content Generation (Gemini 3.1 Flash Lite)
+             │  → Software Used
+             │  → Theory text
+             │  → Source Code
+             ▼
+[2] Subprocess Code Execution (Local / Linux Sandbox)
+             │  → Safety & RAM Scanners
+             │  → Matplotlib Plot Capture
+             │  → stdout / stderr
+             │  → Self-Healing retry loop on error (max 3 retries)
+             ▼
+[3] VS Code Terminal Rendering (Playwright)
+             │  → Styled VS Code dark terminal PNG from output text
+             ▼
+[4] In-Memory Document Assembly (python-docx)
+             │  → Times New Roman typography & standard margins
+             │  → Inline Aim, Software Used, Theory, Code
+             │  → Terminal PNG & Matplotlib Plot embedding
+             ▼
+[5] Export / Download
+             → Downloadable .docx file (generated completely in-memory)
 ```
 
 ---
 
 ## 1. Content Generation
 
-**Component:** LLM call (Gemini API, or any LLM you're already using)
+**Component:** LLM call (`gemini-3.1-flash-lite` via `google-generativeai`)
 
-- **Input:** aim, language, optional style/length hints
-- **Output:** theory text, source code
-- Two separate prompts (or one structured-JSON prompt) — one for theory, one for code — so each can be regenerated independently without re-running the other.
-- Use few-shot examples matching your college's expected theory tone/length (concise, textbook-style) for consistency across experiments.
-- Structured output (JSON mode) recommended so `theory` and `code` land in predictable fields, no parsing guesswork.
+- **Input:** Experiment Aim, Programming Language, and optional user instructions (e.g. *"Use recursion"*, *"Explain time complexity"*).
+- **Output:** Structured JSON containing `software_used`, `theory`, and `code`.
+- **JSON Schema Enforcement:** Prompts mandate strict JSON structure to prevent output parsing failures.
+- **Self-Healing Loop:** If code fails during execution, a secondary prompt feeds the original code and exact error back to Gemini to request a corrected version.
 
 ---
 
-## 2. Code Execution (Sandbox)
+## 2. Code Execution & Security Sandbox
 
-**Component:** Per-language Docker containers, or a hosted execution API (e.g., Piston, Judge0)
+**Component:** Local Subprocess Runner (`backend/executor.py`)
 
-- Executes generated code safely, isolated from host machine.
-- Captures `stdout` + `stderr`.
-- **Retry loop:** if `stderr` is non-empty → feed the error back to the LLM with the original code → regenerate → re-run. Cap at ~3 attempts, then flag for manual review.
-- Supports multiple languages (C, C++, Java, Python, etc.) via separate container images or an execution API that already supports multi-language.
+- Runs generated code safely using local environment runtimes (`python`, `gcc`, `g++`, `javac`, `node`, `rustc`).
+- **Security & Safety Guardrails:**
+  - **Dangerous Code Scanner:** Scans for forbidden patterns (`os.remove`, `shutil.rmtree`, `subprocess`, `/etc/passwd`) before execution.
+  - **Memory Protection Scanner:** Flags heavy packages (`TensorFlow`, `PyTorch`) that exceed free-tier RAM limits.
+  - **Linux Security Isolation:** On Linux production servers (e.g., Render), process privileges drop to the unprivileged `nobody` user.
+- **Plot Capture:** Monkeypatches `matplotlib.pyplot.savefig` to automatically capture generated charts to `plot.png` without crashing headlessly.
+- **Self-Healing Retry Loop:** If execution fails (`stderr` non-empty or non-zero exit code), the error is returned to Gemini for automated repair (up to 3 attempts).
 
 ---
 
 ## 3. Terminal Output Rendering
 
-**Component:** Terminal-style renderer (not a real screenshot)
+**Component:** Playwright + HTML/CSS Terminal Template (`backend/renderer.py`)
 
-- Render captured stdout/stderr into a styled terminal-look image.
-- Options:
-  - HTML/CSS terminal mockup + headless browser screenshot (Playwright/Puppeteer)
-  - Python `rich` library → export to PNG
-  - `termshot` / `carbon-now-sh`-style renderers
-- Output: a PNG that looks like a real terminal window, scriptable and consistent — no OS-dependent screenshot fragility.
+- Renders captured `stdout` and `stderr` into an HTML template (`backend/templates/terminal.html`) styled like a VS Code dark-mode terminal.
+- **Playwright Headless Browser:** Takes a high-resolution element screenshot (`#terminal`) to output a crisp `terminal.png`.
+- Ensures clean, consistent, cross-platform terminal visual output independent of host OS styling.
 
 ---
 
 ## 4. Document Assembly
 
-**Component:** `python-docx`
+**Component:** `python-docx` (`backend/assembler.py`)
 
-- Template `.docx` with placeholders: `{{AIM}}`, `{{THEORY}}`, `{{CODE}}`, `{{OUTPUT_IMAGE}}`
-- Code block inserted with syntax highlighting (via `pygments`, rendered as formatted text or image).
-- Terminal PNG from step 3 inserted at `{{OUTPUT_IMAGE}}`.
-- For a full lab file: loop this per experiment, appending each filled section (with page breaks) into one combined document.
-
----
-
-## 5. Export
-
-**Component:** `docx2pdf` or `libreoffice --headless --convert-to pdf`
-
-- Converts the final combined DOCX into a single PDF lab file.
+- Assembles the complete document in-memory into a `BytesIO` buffer — zero temporary files written to disk.
+- Applies standard styling:
+  - **Title:** `Experiment - N` (Times New Roman 16pt Bold, Centered)
+  - **Aim & Software Used:** Inline bold headers (16pt) with content (14pt)
+  - **Theory & Code:** Headings (16pt Bold) followed by formatted content (14pt)
+  - **Output Section:** Embeds the rendered `terminal.png` image and optional `plot.png` chart image.
 
 ---
 
-## Orchestration
+## 5. Deployment & Orchestration
 
-A single Python script or lightweight FastAPI backend chaining steps 1→5, optionally wrapped in a Streamlit/Gradio UI:
-
-```
-POST /generate-experiment
-  { aim, language }
-  → runs steps 1-5
-  → returns experiment PDF/DOCX
-
-POST /generate-lab-file
-  { [ {aim, language}, {aim, language}, ... ] }
-  → runs steps 1-5 per experiment
-  → returns combined lab file PDF
-```
+**Backend:** FastAPI + Uvicorn hosting single endpoints (`POST /api/generate`)  
+**Frontend:** Vanilla HTML/CSS/JS SaaS interface with live progress indicators  
+**Production Hosting:** Deployed on Render with headless Playwright Chromium and compiler toolchains  
 
 ---
 
@@ -107,18 +94,26 @@ POST /generate-lab-file
 
 | Concern | Mitigation |
 |---|---|
-| LLM-generated code may fail on first run | Error-feedback retry loop (step 2) |
-| Running arbitrary code is unsafe | Docker sandbox per language, or hosted execution API |
-| Real terminal screenshots are OS-fragile | Render styled terminal image from captured text instead |
-| Theory tone/length inconsistent with college format | Few-shot prompt examples matching expected style |
-| Multi-experiment formatting drift | Single template, looped programmatically, not hand-edited per experiment |
+| Generated code fails compilation/runtime | Self-healing LLM error repair loop (up to 3 retries) |
+| Arbitrary code execution risks on server | Pre-execution pattern scanners + Linux `nobody` unprivileged user drop |
+| Heavy ML models crash server memory | Pre-execution scanner detects heavy libraries (PyTorch/TF) and advises local execution |
+| Matplotlib popups block server thread | Headless `Agg` backend monkeypatch forces savefig to in-memory bytes |
+| Terminal screenshot OS inconsistency | HTML/CSS VS Code mockup captured via headless Playwright |
 
 ---
 
-## Suggested Stack
+## Suggested / Actual Stack
 
-- **Generation:** Gemini API
-- **Execution:** Docker (per-language images) or Piston/Judge0 API
-- **Terminal rendering:** Playwright + HTML/CSS terminal template, or Python `rich`
-- **Document:** `python-docx` + LibreOffice headless (PDF conversion)
-- **Orchestration/UI:** FastAPI backend + Streamlit/Gradio front end
+- **LLM:** Google Gemini 3.1 Flash Lite
+- **Backend:** FastAPI + Uvicorn
+- **Code Execution:** Local Subprocess Sandbox + Custom Security Scanners
+- **Terminal Renderer:** Playwright + HTML/CSS
+- **Document Builder:** `python-docx`
+- **Frontend:** Vanilla HTML5 / CSS3 / JS
+
+---
+
+## ⚠️ Disclaimer
+
+This architecture and project were developed strictly for educational and portfolio demonstration purposes to explore LLM integration, automated code execution, and programmatic document assembly. It is not intended to bypass academic integrity policies.
+
