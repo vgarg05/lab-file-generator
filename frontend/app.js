@@ -54,12 +54,7 @@ langSelect.addEventListener('change', validateForm);
 // Run once on load
 validateForm();
 
-// ── Component card toggle ─────────────────────────────────────
-document.querySelectorAll('.comp-card').forEach(card => {
-  card.addEventListener('click', () => {
-    card.classList.toggle('selected');
-  });
-});
+
 
 // ── Step state helper ─────────────────────────────────────────
 function setStepState(index, state) {
