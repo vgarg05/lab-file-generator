@@ -257,12 +257,11 @@ def run_code(code: str, language: str) -> dict:
         #
         # IMPORTANT — Linux path rule:
         # Linux does NOT search the current directory (cwd) for executables.
-        # Compiled binaries (C, C++, Rust) must be referenced as "./main.exe"
-        # not "main.exe", otherwise Linux raises FileNotFoundError.
-        # On Windows, "main.exe" works fine without the prefix.
+        # Compiled binaries (C, C++, Rust) use absolute path inside tmp_dir
+        # so they execute seamlessly on both Windows and Linux without PATH search issues.
         run_cmd = list(config["run"])
-        if sys.platform.startswith("linux") and config.get("exe_name"):
-            run_cmd[0] = "./" + run_cmd[0]
+        if config.get("exe_name"):
+            run_cmd[0] = os.path.join(tmp_dir, config["exe_name"])
 
         run_kwargs: dict = {
             "cwd":            tmp_dir,
@@ -418,8 +417,8 @@ def run_code_stream(code: str, language: str):
                 return
 
         run_cmd = list(config["run"])
-        if sys.platform.startswith("linux") and config.get("exe_name"):
-            run_cmd[0] = "./" + run_cmd[0]
+        if config.get("exe_name"):
+            run_cmd[0] = os.path.join(tmp_dir, config["exe_name"])
 
         run_kwargs: dict = {
             "cwd": tmp_dir,
