@@ -330,8 +330,8 @@ async def generate_experiment_stream(req: GenerateRequest):
                     stderr = ev.get("stderr", "")
                     plot_png = ev.get("plot_png")
 
-            # Retry / fix loop if stderr
-            if stderr and not stdout:
+            # Retry / fix loop if any execution error occurred
+            if stderr:
                 for attempt in range(2):
                     yield _sse_event("terminal_output", f"\n[Attempt {attempt+2}] Fixing code error with Gemini...\n")
                     try:
