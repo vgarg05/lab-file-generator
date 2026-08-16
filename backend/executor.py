@@ -186,7 +186,7 @@ def run_code(code: str, language: str) -> dict:
         }
 
     # ── Matplotlib savefig monkeypatch ────────────────────────────────────────
-    if language == "Python":
+    if language == "Python" and ("matplotlib" in code or "plt" in code):
         # Force plt.savefig to always output to "plot.png" in the current directory,
         # overriding any dynamic variables, custom directories, or absolute paths.
         patch = (
@@ -358,7 +358,7 @@ def run_code_stream(code: str, language: str):
         }
         return
 
-    if language == "Python":
+    if language == "Python" and ("matplotlib" in code or "plt" in code):
         patch = (
             "import matplotlib\n"
             "matplotlib.use('Agg')\n"

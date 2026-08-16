@@ -69,20 +69,40 @@ def _take_screenshot(html: str) -> bytes:
     """
     Initialize browser (if needed) and take the terminal screenshot.
     Must only run on the playwright executor thread.
+    Retries automatically once if browser connection was dropped.
     """
-    browser = _init_browser()
-    context = browser.new_context(
-        viewport={"width": 960, "height": 800},
-        device_scale_factor=1,
-    )
-    page = context.new_page()
-    page.set_content(html, wait_until="load")
+    global _browser, _pw
+    for attempt in range(2):
+        try:
+            browser = _init_browser()
+            context = browser.new_context(
+                viewport={"width": 960, "height": 800},
+                device_scale_factor=1,
+            )
+            page = context.new_page()
+            page.set_content(html, wait_until="load")
 
-    terminal = page.locator("#terminal")
-    png_bytes = terminal.screenshot()
+            terminal = page.locator("#terminal")
+            png_bytes = terminal.screenshot()
 
-    context.close()   # free page memory; browser stays alive
-    return png_bytes
+            context.close()   # free page memory; browser stays alive
+            return png_bytes
+        except Exception:
+            # Reset browser handles on failure to force fresh launch on next attempt
+            if _browser:
+                try:
+                    _browser.close()
+                except Exception:
+                    pass
+                _browser = None
+            if _pw:
+                try:
+                    _pw.stop()
+                except Exception:
+                    pass
+                _pw = None
+            if attempt == 1:
+                raise
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
