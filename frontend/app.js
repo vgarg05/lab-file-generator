@@ -89,6 +89,43 @@ function appendTerminalLine(text, isPrompt = false) {
   terminalOutput.scrollTop = terminalOutput.scrollHeight;
 }
 
+function typeTerminalCommand(cmdText, callback) {
+  const line = document.createElement('div');
+  line.className = 'term-line prompt';
+  line.innerHTML = `<span class="term-prefix">(.venv) PS /app> </span><span class="typed-text"></span><span class="term-cursor">█</span>`;
+  terminalOutput.appendChild(line);
+
+  const typedSpan = line.querySelector('.typed-text');
+  const cursorSpan = line.querySelector('.term-cursor');
+  let idx = 0;
+
+  const interval = setInterval(() => {
+    if (idx < cmdText.length) {
+      typedSpan.textContent += cmdText[idx];
+      idx++;
+      terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    } else {
+      clearInterval(interval);
+      setTimeout(() => {
+        if (cursorSpan) cursorSpan.style.display = 'none';
+        if (callback) callback();
+      }, 200);
+    }
+  }, 20);
+}
+
+function animateVirtualMouse(callback) {
+  const mouse = document.getElementById('virtual-mouse');
+  if (!mouse) { if (callback) callback(); return; }
+
+  mouse.style.display = 'block';
+  mouse.className = 'virtual-mouse glide';
+  setTimeout(() => {
+    mouse.style.display = 'none';
+    if (callback) callback();
+  }, 1000);
+}
+
 function appendLogLine(timestamp, msg) {
   logsText.textContent += `\n[${timestamp}] ${msg}`;
   logsText.scrollTop = logsText.scrollHeight;
@@ -99,7 +136,7 @@ function resetAgentPanel() {
   agentStatusMsg.textContent = 'Initializing AI Agent...';
   agentLiveBadge.className = 'agent-badge';
   agentLiveBadge.innerHTML = '<span class="pulse-dot"></span> LIVE';
-  terminalOutput.innerHTML = '<div class="term-line prompt">(.venv) PS /app> waiting for execution...</div>';
+  terminalOutput.innerHTML = '';
   browserPreviewCard.style.display = 'none';
   liveBrowserImg.src = '';
   codeText.textContent = 'Generating code...';
@@ -151,7 +188,7 @@ form.addEventListener('submit', async (e) => {
   successSection.style.display = 'none';
   agentPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-  appendTerminalLine(`(.venv) PS /app> python main.py --lang=${language}`, true);
+  typeTerminalCommand(`python runner.py --target=${language.toLowerCase()}`);
 
   try {
     const response = await fetch('/generate-stream', {
@@ -264,8 +301,10 @@ function handleAgentEvent(payload, experimentNumber) {
       setTimelineStep('step-playwright', 'completed');
       setTimelineStep('step-docx', 'running');
       if (data && data.image) {
-        liveBrowserImg.src = `data:image/png;base64,${data.image}`;
         browserPreviewCard.style.display = 'block';
+        animateVirtualMouse(() => {
+          liveBrowserImg.src = `data:image/png;base64,${data.image}`;
+        });
         browserPreviewCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
       break;

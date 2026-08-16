@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=4" />
+  <link rel="stylesheet" href="/static/style.css?v=5" />
 </head>
 <body>
 
@@ -276,7 +276,12 @@
               <div class="browser-url">localhost:8000/render-preview</div>
               <span class="preview-tag">LIVE BROWSER PREVIEW</span>
             </div>
-            <div class="browser-viewport">
+            <div class="browser-viewport" style="position: relative;">
+              <div class="virtual-mouse" id="virtual-mouse" style="display: none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#7c3aed" stroke="#ffffff" stroke-width="1.5">
+                  <path d="M3 3l7 18 3-7 7-3L3 3z"/>
+                </svg>
+              </div>
               <img id="live-browser-img" src="" alt="Live Playwright Preview..." />
             </div>
           </div>

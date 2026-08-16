@@ -919,12 +919,46 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+  min-height: 180px;
 }
 .browser-viewport img {
   width: 100%;
   height: auto;
   display: block;
   object-fit: contain;
+}
+
+/* Virtual Mouse & Terminal Cursor Animations */
+.term-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: #38bdf8;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.virtual-mouse {
+  position: absolute;
+  top: 20%;
+  left: 20%;
+  z-index: 10;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+.virtual-mouse.glide {
+  animation: glideMouse 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes glideMouse {
+  0% { top: 70%; left: 80%; opacity: 0; transform: scale(0.8); }
+  30% { opacity: 1; transform: scale(1.1); }
+  70% { top: 35%; left: 45%; transform: scale(1); }
+  100% { top: 40%; left: 50%; opacity: 0; transform: scale(0.9); }
 }
 
 /* Accordions */
