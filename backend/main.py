@@ -26,6 +26,9 @@ from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from backend.logger import get_logger
+
+logger = get_logger("labgen.main")
 
 load_dotenv()
 
@@ -89,11 +92,12 @@ async def lifespan(app: FastAPI):
     """
     Warm up Chromium at server startup so the first user never
     waits for a cold-start browser launch during generation.
-    warmup_browser() dispatches to the dedicated playwright thread
-    internally, so it is safe to call directly from async context.
     """
+    logger.info("Server starting up. Warming up Chromium browser...")
     warmup_browser()   # blocks until Chromium is ready
+    logger.info("Chromium warmup completed. Server is ready to process requests.")
     yield              # server runs; browser stays alive until shutdown
+    logger.info("Server shutting down...")
 
 app = FastAPI(title="Lab File Generator", version="1.0.0", lifespan=lifespan)
 
@@ -254,7 +258,9 @@ def download_generated_file(file_id: str):
     """Download a generated DOCX file by its stream file_id."""
     file_info = _generated_files.get(file_id)
     if not file_info:
+        logger.warning(f"Download requested for unknown or expired file_id: {file_id}")
         raise HTTPException(status_code=404, detail="File not found or download link expired.")
+    logger.info(f"GET /download/{file_id} — Serving file '{file_info['filename']}' ({len(file_info['bytes'])} bytes)")
     return Response(
         content=file_info["bytes"],
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -271,18 +277,25 @@ async def generate_experiment_stream(req: GenerateRequest):
     Emits live status updates, code output line-by-line, Playwright browser screenshot,
     and final DOCX download link.
     """
+    logger.info(
+        f"POST /generate-stream — Exp #{req.experiment_number}, language='{req.language}', aim='{req.aim[:50]}...'"
+    )
     if not req.aim.strip():
+        logger.warning("Rejected request: Empty aim.")
         raise HTTPException(status_code=400, detail="Aim cannot be empty.")
     if req.experiment_number < 1:
+        logger.warning(f"Rejected request: Invalid experiment number {req.experiment_number}.")
         raise HTTPException(status_code=400, detail="Experiment number must be ≥ 1.")
 
     blocked_reason = _validate_aim(req.aim)
     if blocked_reason:
+        logger.warning(f"Rejected request: Aim contains blocked content '{blocked_reason}'.")
         raise HTTPException(status_code=400, detail=f"Your experiment aim contains {blocked_reason}.")
 
     if req.code_instructions.strip():
         blocked_reason = _validate_aim(req.code_instructions)
         if blocked_reason:
+            logger.warning(f"Rejected request: Code instructions contain blocked content '{blocked_reason}'.")
             raise HTTPException(status_code=400, detail=f"Your code instructions contain {blocked_reason}.")
 
     async def event_generator():
@@ -332,6 +345,7 @@ async def generate_experiment_stream(req: GenerateRequest):
 
             # Retry / fix loop if any execution error occurred
             if stderr:
+                logger.warning(f"Code execution yielded stderr for Exp #{req.experiment_number}: {stderr[:100]}...")
                 for attempt in range(2):
                     yield _sse_event("terminal_output", f"\n[Attempt {attempt+2}] Fixing code error with Gemini...\n")
                     try:
@@ -347,9 +361,10 @@ async def generate_experiment_stream(req: GenerateRequest):
                                 stderr = ev.get("stderr", "")
                                 plot_png = ev.get("plot_png")
                         if not stderr:
+                            logger.info(f"Self-healing auto-correct succeeded on Attempt #{attempt+2} for Exp #{req.experiment_number}")
                             break
-                    except Exception:
-                        pass
+                    except Exception as fix_exc:
+                        logger.error(f"Auto-fix attempt #{attempt+2} failed: {fix_exc}")
 
             output_text = stdout if stdout else (stderr if stderr else "(No output produced)")
 
@@ -370,6 +385,7 @@ async def generate_experiment_stream(req: GenerateRequest):
                     "image": img_b64,
                 })
             except Exception as exc:
+                logger.error(f"Playwright screenshot rendering failed: {exc}")
                 yield _sse_event("terminal_output", f"\n[Notice] Terminal screenshot renderer timed out. Proceeding with document creation...\n")
             await asyncio.sleep(0.2)
 
@@ -394,12 +410,15 @@ async def generate_experiment_stream(req: GenerateRequest):
                 "created_at": time.time(),
             }
 
+            logger.info(f"Exp #{req.experiment_number} generated successfully! File ID: {file_id}, size: {len(docx_bytes)} bytes")
+
             yield _sse_event("completed", "Word document generated successfully!", data={
                 "download_url": f"/download/{file_id}",
                 "filename": filename,
             })
 
         except Exception as exc:
+            logger.error(f"SSE Pipeline crashed for Exp #{req.experiment_number}: {exc}", exc_info=True)
             yield _sse_event("error", f"Generation failed: {str(exc)}")
 
     return StreamingResponse(

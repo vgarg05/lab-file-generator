@@ -21,6 +21,10 @@ import tempfile
 import shutil
 from pathlib import Path
 
+from backend.logger import get_logger
+
+logger = get_logger("labgen.executor")
+
 # ── Heavy packages that crash Render free tier (512 MB RAM limit) ─────────────
 # Key   = friendly package name shown to user
 # Value = list of regex patterns to detect in generated code

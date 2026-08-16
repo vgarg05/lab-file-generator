@@ -14,8 +14,12 @@ Thread Safety:
 
 import concurrent.futures
 import textwrap
+import time
 from pathlib import Path
 from playwright.sync_api import sync_playwright, Browser, Playwright
+from backend.logger import get_logger
+
+logger = get_logger("labgen.renderer")
 
 TEMPLATE_PATH = Path(__file__).parent / "templates" / "terminal.html"
 
@@ -54,6 +58,7 @@ def _init_browser() -> Browser:
     global _pw, _browser
 
     if _browser is None or not _browser.is_connected():
+        logger.info("Launching headless Chromium browser instance...")
         if _pw is not None:
             try:
                 _pw.stop()
@@ -61,6 +66,7 @@ def _init_browser() -> Browser:
                 pass
         _pw = sync_playwright().start()
         _browser = _pw.chromium.launch(headless=True)
+        logger.info("Headless Chromium browser launched successfully.")
 
     return _browser
 

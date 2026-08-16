@@ -6,9 +6,13 @@ Handles theory generation, code generation, and code fixing.
 import os
 import json
 import re
+import time
 
 import google.generativeai as genai
 from dotenv import load_dotenv
+from backend.logger import get_logger
+
+logger = get_logger("labgen.generator")
 
 load_dotenv()
 
@@ -35,9 +39,7 @@ _plain_model = genai.GenerativeModel(
 def _strip_code_fences(text: str) -> str:
     """Remove markdown code fences if the model wraps output despite being told not to."""
     text = text.strip()
-    # Remove leading fence with optional language tag
     text = re.sub(r"^```[a-zA-Z+#]*\n?", "", text)
-    # Remove trailing fence
     text = re.sub(r"\n?```$", "", text)
     return text.strip()
 
@@ -48,15 +50,11 @@ def generate_theory_and_code(
 ) -> dict:
     """
     Generate the theory, code, and software used for the experiment using the structured prompts.
-
-    Args:
-        api_key: Optional user-provided Gemini API key. If given, overrides the system key
-                 so the request uses the user's own quota instead of the shared server quota.
-
-    Returns:
-        dict with keys "theory" (str), "code" (str), and "software" (str)
     """
-    # Use user-provided key if given, otherwise fall back to system env key
+    start_time = time.time()
+    custom_key_str = " (using custom user API key)" if api_key else " (using system API key)"
+    logger.info(f"Generating content for language='{language}', aim='{aim[:50]}...'{custom_key_str}")
+
     if api_key:
         import google.generativeai as _genai
         _genai.configure(api_key=api_key)
@@ -160,6 +158,8 @@ Generate the complete experiment while strictly respecting the separation betwee
 
     response = json_model.generate_content(prompt)
     data = json.loads(response.text)
+    elapsed = time.time() - start_time
+    logger.info(f"Gemini content generation completed in {elapsed:.2f}s")
 
     return {
         "theory": data.get("theory", "").strip(),
@@ -171,10 +171,9 @@ Generate the complete experiment while strictly respecting the separation betwee
 def fix_code(code: str, error: str, aim: str, language: str) -> str:
     """
     Ask Gemini to fix code that produced a compile / runtime error.
-
-    Returns:
-        Fixed source code as a plain string.
     """
+    logger.warning(f"Requesting Gemini auto-correct for {language} error: {error[:80]}...")
+    start_time = time.time()
     java_note = (
         'IMPORTANT: The public class MUST be named "Main".'
         if language == "Java"
@@ -195,4 +194,7 @@ Original Aim: {aim}
 Return ONLY the corrected {language} source code. No markdown code fences, no explanations."""
 
     response = _plain_model.generate_content(prompt)
-    return _strip_code_fences(response.text)
+    fixed = _strip_code_fences(response.text)
+    elapsed = time.time() - start_time
+    logger.info(f"Gemini auto-correct completed in {elapsed:.2f}s")
+    return fixed
