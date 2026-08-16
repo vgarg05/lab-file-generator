@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=3" />
+  <link rel="stylesheet" href="/static/style.css?v=4" />
 </head>
 <body>
 
@@ -205,27 +205,104 @@
           </form>
         </div>
 
-        <!-- Progress Card -->
-        <div id="progress-section" role="status" aria-label="Generation progress">
-          <div class="prog-title">Generating your lab file…</div>
-          <div class="steps-list">
-            <div class="step pending" id="step-1">
-              <div class="step-ind">1</div>
-              <span class="step-lbl">Generating theory &amp; code with Gemini…</span>
+        <!-- Real-Time AI Agent Live Execution Panel -->
+        <div id="agent-panel" class="agent-panel" style="display: none;" role="status" aria-label="AI Agent Execution">
+          
+          <!-- Agent Header Bar -->
+          <div class="agent-header">
+            <div class="agent-title">
+              <span class="agent-avatar">🤖</span>
+              <div>
+                <div class="agent-name">AI Agent</div>
+                <div class="agent-status-text" id="agent-status-msg">Initializing AI Agent...</div>
+              </div>
             </div>
-            <div class="step pending" id="step-2">
-              <div class="step-ind">2</div>
-              <span class="step-lbl">Executing code locally…</span>
-            </div>
-            <div class="step pending" id="step-3">
-              <div class="step-ind">3</div>
-              <span class="step-lbl">Rendering terminal output…</span>
-            </div>
-            <div class="step pending" id="step-4">
-              <div class="step-ind">4</div>
-              <span class="step-lbl">Assembling Word document…</span>
+            <div class="agent-badge" id="agent-live-badge">
+              <span class="pulse-dot"></span> LIVE
             </div>
           </div>
+
+          <!-- Step Timeline -->
+          <div class="agent-timeline">
+            <div class="timeline-item pending" id="step-task">
+              <span class="step-icon">○</span>
+              <span class="step-label">Understand task</span>
+            </div>
+            <div class="timeline-item pending" id="step-code">
+              <span class="step-icon">○</span>
+              <span class="step-label">Generate code</span>
+            </div>
+            <div class="timeline-item pending" id="step-sandbox">
+              <span class="step-icon">○</span>
+              <span class="step-label">Start sandbox</span>
+            </div>
+            <div class="timeline-item pending" id="step-exec">
+              <span class="step-icon">○</span>
+              <span class="step-label">Execute code</span>
+            </div>
+            <div class="timeline-item pending" id="step-playwright">
+              <span class="step-icon">○</span>
+              <span class="step-label">Run Playwright</span>
+            </div>
+            <div class="timeline-item pending" id="step-docx">
+              <span class="step-icon">○</span>
+              <span class="step-label">Assemble DOCX</span>
+            </div>
+          </div>
+
+          <!-- Live Terminal Window -->
+          <div class="terminal-container">
+            <div class="terminal-bar">
+              <div class="terminal-dots">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+              </div>
+              <div class="terminal-title">LIVE TERMINAL VIEW</div>
+            </div>
+            <div class="terminal-body" id="live-terminal-output">
+              <div class="term-line prompt">(.venv) PS /app> waiting for execution...</div>
+            </div>
+          </div>
+
+          <!-- Live Browser Screenshot Preview -->
+          <div class="browser-preview-container" id="browser-preview-card" style="display: none;">
+            <div class="browser-bar">
+              <div class="browser-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <div class="browser-url">localhost:8000/render-preview</div>
+              <span class="preview-tag">LIVE BROWSER PREVIEW</span>
+            </div>
+            <div class="browser-viewport">
+              <img id="live-browser-img" src="" alt="Live Playwright Preview..." />
+            </div>
+          </div>
+
+          <!-- Expandable Generated Code -->
+          <details class="agent-accordion" id="code-accordion">
+            <summary class="accordion-summary">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              Generated Code
+            </summary>
+            <div class="accordion-body">
+              <pre><code id="agent-code-text">Generating code...</code></pre>
+            </div>
+          </details>
+
+          <!-- Expandable Execution Logs -->
+          <details class="agent-accordion" id="logs-accordion">
+            <summary class="accordion-summary">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Execution Logs
+            </summary>
+            <div class="accordion-body">
+              <pre id="agent-logs-text">Agent session started...</pre>
+            </div>
+          </details>
+
         </div>
 
         <!-- Success Card -->

@@ -318,3 +318,161 @@ def run_code(code: str, language: str) -> dict:
             shutil.rmtree(tmp_dir, ignore_errors=True)
         except Exception:
             pass
+
+
+def run_code_stream(code: str, language: str):
+    """
+    Generator version of run_code. Yields execution events in real-time as lines arrive:
+        yield {"type": "log", "text": "..."}
+        yield {"type": "stdout", "text": "..."}
+        yield {"type": "result", "stdout": "...", "stderr": "...", "plot_png": bytes}
+    """
+    heavy = _detect_heavy_package(code)
+    if heavy:
+        msg = (
+            f"[Server Notice] This experiment uses {heavy}, which requires\n"
+            f"more memory than available on the free server.\n"
+            f"Please run this experiment locally on your machine\n"
+            f"where {heavy} is installed."
+        )
+        yield {"type": "result", "stdout": msg, "stderr": "", "plot_png": None}
+        return
+
+    dangerous = _detect_dangerous_code(code)
+    if dangerous:
+        msg = (
+            f"[Security Notice] The generated code contains {dangerous},\n"
+            f"which is blocked for safety reasons on this server.\n"
+            f"Please modify your aim to avoid system-level operations."
+        )
+        yield {"type": "result", "stdout": msg, "stderr": "", "plot_png": None}
+        return
+
+    config = LANGUAGE_CONFIG.get(language)
+    if config is None:
+        yield {
+            "type": "result",
+            "stdout": "",
+            "stderr": f"Unsupported language: {language}.",
+            "plot_png": None,
+        }
+        return
+
+    if language == "Python":
+        patch = (
+            "import matplotlib\n"
+            "matplotlib.use('Agg')\n"
+            "import matplotlib.pyplot as plt\n"
+            "_orig_savefig = plt.savefig\n"
+            "def _safe_savefig(*args, **kwargs):\n"
+            "    if args:\n"
+            "        args = ('plot.png',) + args[1:]\n"
+            "    else:\n"
+            "        kwargs['fname'] = 'plot.png'\n"
+            "    return _orig_savefig(*args, **kwargs)\n"
+            "plt.savefig = _safe_savefig\n"
+        )
+        code = patch + "\n" + code
+
+    tmp_dir = tempfile.mkdtemp(prefix="labgen_")
+    if sys.platform.startswith("linux"):
+        os.chmod(tmp_dir, 0o777)
+
+    try:
+        src_path = os.path.join(tmp_dir, config["filename"])
+        with open(src_path, "w", encoding="utf-8") as f:
+            f.write(code)
+
+        if sys.platform.startswith("linux"):
+            os.chmod(src_path, 0o644)
+
+        if config["compile"]:
+            yield {"type": "log", "text": f"Compiling {config['filename']}..."}
+            try:
+                compile_result = subprocess.run(
+                    config["compile"],
+                    cwd=tmp_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=COMPILE_TIMEOUT,
+                )
+            except subprocess.TimeoutExpired:
+                yield {"type": "result", "stdout": "", "stderr": "Compilation timed out (30s limit).", "plot_png": None}
+                return
+            except FileNotFoundError as exc:
+                yield {
+                    "type": "result",
+                    "stdout": "",
+                    "stderr": f"Compiler not found: {exc.filename}.",
+                    "plot_png": None,
+                }
+                return
+
+            if compile_result.returncode != 0:
+                yield {
+                    "type": "result",
+                    "stdout": "",
+                    "stderr": compile_result.stderr.strip() or "Compilation failed.",
+                    "plot_png": None,
+                }
+                return
+
+        run_cmd = list(config["run"])
+        if sys.platform.startswith("linux") and config.get("exe_name"):
+            run_cmd[0] = "./" + run_cmd[0]
+
+        run_kwargs: dict = {
+            "cwd": tmp_dir,
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.STDOUT,
+            "text": True,
+            "bufsize": 1,
+        }
+        if sys.platform.startswith("linux"):
+            try:
+                import pwd
+                nobody_uid = pwd.getpwnam("nobody").pw_uid
+                run_kwargs["user"] = nobody_uid
+            except (KeyError, PermissionError):
+                pass
+
+        yield {"type": "log", "text": f"Executing {language} program..."}
+
+        full_output = []
+        try:
+            process = subprocess.Popen(run_cmd, **run_kwargs)
+            for line in process.stdout:
+                full_output.append(line)
+                yield {"type": "stdout", "text": line}
+            process.wait(timeout=RUN_TIMEOUT)
+            returncode = process.returncode
+        except subprocess.TimeoutExpired:
+            process.kill()
+            yield {"type": "result", "stdout": "".join(full_output), "stderr": "Execution timed out (30s limit).", "plot_png": None}
+            return
+        except FileNotFoundError as exc:
+            yield {"type": "result", "stdout": "", "stderr": f"Runtime not found: {exc.filename}.", "plot_png": None}
+            return
+
+        stdout_text = "".join(full_output).strip()
+
+        plot_bytes = None
+        plot_path = os.path.join(tmp_dir, "plot.png")
+        if os.path.exists(plot_path):
+            try:
+                with open(plot_path, "rb") as f:
+                    plot_bytes = f.read()
+            except Exception:
+                pass
+
+        if returncode != 0:
+            yield {"type": "result", "stdout": stdout_text, "stderr": "Program exited with non-zero code.", "plot_png": plot_bytes}
+        else:
+            yield {"type": "result", "stdout": stdout_text, "stderr": "", "plot_png": plot_bytes}
+
+    finally:
+        try:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        except Exception:
+            pass
+

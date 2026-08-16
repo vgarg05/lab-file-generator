@@ -11,12 +11,16 @@ Run with:
 """
 
 import asyncio
+import base64
 import io
+import json
 import re
+import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -27,9 +31,24 @@ load_dotenv()
 
 # Import pipeline steps
 from backend.generator import generate_theory_and_code, fix_code
-from backend.executor import run_code
+from backend.executor import run_code, run_code_stream
 from backend.renderer import render_terminal, warmup_browser
 from backend.assembler import assemble_document
+
+# In-memory store for generated .docx files from stream requests
+_generated_files: dict[str, dict] = {}
+
+
+def _sse_event(event_type: str, message: str, data: dict = None) -> str:
+    payload = {
+        "type": event_type,
+        "message": message,
+        "timestamp": time.strftime("%H:%M:%S"),
+    }
+    if data is not None:
+        payload["data"] = data
+    return f"data: {json.dumps(payload)}\n\n"
+
 
 # ── Dangerous aim keyword filter ────────────────────────────────────────────
 # Each entry: (regex_pattern, human_readable_reason)
@@ -228,3 +247,165 @@ def generate_experiment(req: GenerateRequest):
             "X-Experiment-Number": str(req.experiment_number),
         },
     )
+
+
+@app.get("/download/{file_id}")
+def download_generated_file(file_id: str):
+    """Download a generated DOCX file by its stream file_id."""
+    file_info = _generated_files.get(file_id)
+    if not file_info:
+        raise HTTPException(status_code=404, detail="File not found or download link expired.")
+    return Response(
+        content=file_info["bytes"],
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f'attachment; filename="{file_info["filename"]}"'
+        },
+    )
+
+
+@app.post("/generate-stream")
+async def generate_experiment_stream(req: GenerateRequest):
+    """
+    Real-time Server-Sent Events (SSE) streaming pipeline.
+    Emits live status updates, code output line-by-line, Playwright browser screenshot,
+    and final DOCX download link.
+    """
+    if not req.aim.strip():
+        raise HTTPException(status_code=400, detail="Aim cannot be empty.")
+    if req.experiment_number < 1:
+        raise HTTPException(status_code=400, detail="Experiment number must be ≥ 1.")
+
+    blocked_reason = _validate_aim(req.aim)
+    if blocked_reason:
+        raise HTTPException(status_code=400, detail=f"Your experiment aim contains {blocked_reason}.")
+
+    if req.code_instructions.strip():
+        blocked_reason = _validate_aim(req.code_instructions)
+        if blocked_reason:
+            raise HTTPException(status_code=400, detail=f"Your code instructions contain {blocked_reason}.")
+
+    async def event_generator():
+        try:
+            yield _sse_event("agent_started", "AI Agent initialized. Processing task...")
+            await asyncio.sleep(0.2)
+
+            # ── 1. Gemini theory + code ─────────────────────────────────────────
+            yield _sse_event("generating_code", "Generating theory and source code with Gemini...")
+            api_key = req.api_key.strip() or None
+            content = await asyncio.to_thread(
+                generate_theory_and_code,
+                req.aim, req.language, req.code_instructions, req.theory_instructions, api_key=api_key
+            )
+
+            theory = content["theory"]
+            final_code = content["code"]
+            software = content["software"]
+
+            yield _sse_event("code_generated", "Theory and code generated successfully", data={
+                "code": final_code,
+                "theory": theory,
+                "software": software,
+            })
+            await asyncio.sleep(0.2)
+
+            # ── 2. Sandbox execution & streaming ──────────────────────────────
+            yield _sse_event("sandbox_starting", "Initializing isolated sandbox environment...")
+            yield _sse_event("execution_started", f"Executing {req.language} program in sandbox...")
+
+            stdout, stderr = "", ""
+            plot_png = None
+
+            def _stream_runner():
+                return list(run_code_stream(final_code, req.language))
+
+            events = await asyncio.to_thread(_stream_runner)
+
+            for ev in events:
+                if ev["type"] in ("log", "stdout"):
+                    yield _sse_event("terminal_output", ev.get("text", ""))
+                    await asyncio.sleep(0.02)
+                elif ev["type"] == "result":
+                    stdout = ev.get("stdout", "")
+                    stderr = ev.get("stderr", "")
+                    plot_png = ev.get("plot_png")
+
+            # Retry / fix loop if stderr
+            if stderr and not stdout:
+                for attempt in range(2):
+                    yield _sse_event("terminal_output", f"\n[Attempt {attempt+2}] Fixing code error with Gemini...\n")
+                    try:
+                        final_code = await asyncio.to_thread(fix_code, final_code, stderr, req.aim, req.language)
+                        yield _sse_event("code_generated", f"Code auto-corrected (Attempt {attempt+2})", data={"code": final_code})
+                        retry_events = await asyncio.to_thread(lambda: list(run_code_stream(final_code, req.language)))
+                        for ev in retry_events:
+                            if ev["type"] in ("log", "stdout"):
+                                yield _sse_event("terminal_output", ev.get("text", ""))
+                                await asyncio.sleep(0.02)
+                            elif ev["type"] == "result":
+                                stdout = ev.get("stdout", "")
+                                stderr = ev.get("stderr", "")
+                                plot_png = ev.get("plot_png")
+                        if not stderr:
+                            break
+                    except Exception:
+                        pass
+
+            output_text = stdout if stdout else (stderr if stderr else "(No output produced)")
+
+            yield _sse_event("execution_completed", "Code execution completed", data={
+                "stdout": stdout,
+                "stderr": stderr,
+                "output_text": output_text,
+            })
+            await asyncio.sleep(0.2)
+
+            # ── 3. Playwright Terminal Screenshot ─────────────────────────────
+            yield _sse_event("playwright_starting", "Launching Playwright renderer...")
+            terminal_png = await asyncio.to_thread(render_terminal, output_text.strip(), req.language)
+            img_b64 = base64.b64encode(terminal_png).decode("utf-8")
+
+            yield _sse_event("browser_screenshot", "Captured high-res terminal screenshot preview", data={
+                "image": img_b64,
+            })
+            await asyncio.sleep(0.2)
+
+            # ── 4. Assemble Word DOCX ─────────────────────────────────────────
+            yield _sse_event("document_generation", "Assembling Word document (.docx)...")
+            docx_bytes = await asyncio.to_thread(
+                assemble_document,
+                experiment_number=req.experiment_number,
+                aim=req.aim,
+                theory=theory,
+                code=final_code,
+                terminal_png=terminal_png,
+                software=software,
+                plot_png=plot_png,
+            )
+
+            file_id = str(uuid.uuid4())
+            filename = f"Experiment_{req.experiment_number}.docx"
+            _generated_files[file_id] = {
+                "bytes": docx_bytes,
+                "filename": filename,
+                "created_at": time.time(),
+            }
+
+            yield _sse_event("completed", "Word document generated successfully!", data={
+                "download_url": f"/download/{file_id}",
+                "filename": filename,
+            })
+
+        except Exception as exc:
+            yield _sse_event("error", f"Generation failed: {str(exc)}")
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+

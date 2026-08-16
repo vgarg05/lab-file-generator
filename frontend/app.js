@@ -1,11 +1,11 @@
 /* ============================================================
-   app.js — AI Lab Assistant | Dashboard UI
+   app.js — AI Lab Assistant | Real-Time Agent Execution Engine
    ============================================================ */
 
 // ── DOM refs ──────────────────────────────────────────────────
 const form            = document.getElementById('lab-form');
 const generateBtn     = document.getElementById('generate-btn');
-const progressSection = document.getElementById('progress-section');
+const agentPanel      = document.getElementById('agent-panel');
 const successSection  = document.getElementById('success-section');
 const downloadBtn     = document.getElementById('download-btn');
 const resetBtn        = document.getElementById('reset-btn');
@@ -18,27 +18,23 @@ const langSelect      = document.getElementById('language');
 const codeInstInput   = document.getElementById('code-instructions');
 const theoryInstInput = document.getElementById('theory-instructions');
 
-const steps = [
-  document.getElementById('step-1'),
-  document.getElementById('step-2'),
-  document.getElementById('step-3'),
-  document.getElementById('step-4'),
-];
+// Real-time Agent UI refs
+const agentStatusMsg     = document.getElementById('agent-status-msg');
+const agentLiveBadge     = document.getElementById('agent-live-badge');
+const terminalOutput     = document.getElementById('live-terminal-output');
+const browserPreviewCard = document.getElementById('browser-preview-card');
+const liveBrowserImg     = document.getElementById('live-browser-img');
+const codeText           = document.getElementById('agent-code-text');
+const logsText           = document.getElementById('agent-logs-text');
 
-// Fake progress: each step becomes active after these delays (ms)
-const STEP_DELAYS = [0, 8000, 14000, 17000];
+let currentActiveStepId = null;
 
-let stepTimers = [];
-let blobUrl    = null;
-
-// ── Character counter ─────────────────────────────────────────
+// ── Character counter & validation ──────────────────────────────
 aimInput.addEventListener('input', () => {
-  const len = aimInput.value.length;
-  charCount.textContent = `${len} / 500`;
+  charCount.textContent = `${aimInput.value.length} / 500`;
   validateForm();
 });
 
-// ── Form validity → enable / disable generate button ─────────
 function validateForm() {
   const expVal  = parseInt(expInput.value, 10);
   const aimVal  = aimInput.value.trim();
@@ -50,59 +46,66 @@ function validateForm() {
 expInput.addEventListener('input',  validateForm);
 expInput.addEventListener('change', validateForm);
 langSelect.addEventListener('change', validateForm);
-
-// Run once on load
 validateForm();
 
+// ── Step Timeline Helper ──────────────────────────────────────
+const TIMELINE_STEPS = ['step-task', 'step-code', 'step-sandbox', 'step-exec', 'step-playwright', 'step-docx'];
 
-
-// ── Step state helper ─────────────────────────────────────────
-function setStepState(index, state) {
-  const el  = steps[index];
-  if (!el) return;
-  const ind = el.querySelector('.step-ind');
-  el.className = 'step ' + state;
+function setTimelineStep(stepId, state) {
+  const item = document.getElementById(stepId);
+  if (!item) return;
+  const icon = item.querySelector('.step-icon');
+  item.className = `timeline-item ${state}`;
 
   switch (state) {
-    case 'active':
-      ind.innerHTML = '<div class="step-spin"></div>';
+    case 'running':
+      icon.innerHTML = '<div class="timeline-spin"></div>';
+      currentActiveStepId = stepId;
       break;
-    case 'done':
-      ind.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    case 'completed':
+      icon.innerHTML = '✓';
       break;
-    case 's-error':
-      ind.innerHTML = '✕';
+    case 'failed':
+      icon.innerHTML = '✕';
       break;
     default:
-      ind.textContent = String(index + 1);
+      icon.innerHTML = '○';
       break;
   }
 }
 
-function resetAllSteps() {
-  steps.forEach((_, i) => setStepState(i, 'pending'));
+function resetTimeline() {
+  TIMELINE_STEPS.forEach(id => setTimelineStep(id, 'pending'));
+  currentActiveStepId = null;
 }
 
-function clearStepTimers() {
-  stepTimers.forEach(clearTimeout);
-  stepTimers = [];
+// ── Terminal & Log Streaming Helpers ─────────────────────────
+function appendTerminalLine(text, isPrompt = false) {
+  if (!text) return;
+  const line = document.createElement('div');
+  line.className = isPrompt ? 'term-line prompt' : 'term-line';
+  line.textContent = text;
+  terminalOutput.appendChild(line);
+  terminalOutput.scrollTop = terminalOutput.scrollHeight;
 }
 
-// ── Fake progress animation ───────────────────────────────────
-function startFakeProgress() {
-  setStepState(0, 'active');
-
-  STEP_DELAYS.forEach((delay, i) => {
-    if (i === 0) return;
-    const t = setTimeout(() => {
-      setStepState(i - 1, 'done');
-      setStepState(i, 'active');
-    }, delay);
-    stepTimers.push(t);
-  });
+function appendLogLine(timestamp, msg) {
+  logsText.textContent += `\n[${timestamp}] ${msg}`;
+  logsText.scrollTop = logsText.scrollHeight;
 }
 
-// ── Error helper ──────────────────────────────────────────────
+function resetAgentPanel() {
+  resetTimeline();
+  agentStatusMsg.textContent = 'Initializing AI Agent...';
+  agentLiveBadge.className = 'agent-badge';
+  agentLiveBadge.innerHTML = '<span class="pulse-dot"></span> LIVE';
+  terminalOutput.innerHTML = '<div class="term-line prompt">(.venv) PS /app> waiting for execution...</div>';
+  browserPreviewCard.style.display = 'none';
+  liveBrowserImg.src = '';
+  codeText.textContent = 'Generating code...';
+  logsText.textContent = 'Agent session started...';
+}
+
 function showError(msg) {
   errorMsg.textContent = msg;
   errorToast.style.display = 'flex';
@@ -110,49 +113,23 @@ function showError(msg) {
 }
 function hideError() { errorToast.style.display = 'none'; }
 
-// ── Loading state ─────────────────────────────────────────────
 function setLoading(on) {
   generateBtn.disabled = on;
   generateBtn.innerHTML = on
-    ? '<div class="btn-spin"></div><span>Generating…</span>'
+    ? '<div class="btn-spin"></div><span>Executing Agent…</span>'
     : '✦ Generate Lab File →';
 }
 
-// ── Show progress / success ───────────────────────────────────
-function showProgressCard() {
-  progressSection.style.display = 'block';
-  successSection.style.display  = 'none';
-  progressSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function showSuccessCard(blob, experimentNumber) {
-  steps.forEach((_, i) => setStepState(i, 'done'));
-
-  if (blobUrl) URL.revokeObjectURL(blobUrl);
-  blobUrl = URL.createObjectURL(blob);
-  downloadBtn.href     = blobUrl;
-  downloadBtn.download = `Experiment_${experimentNumber}.docx`;
-  downloadBtn.click();
-
-  progressSection.style.display = 'none';
-  successSection.style.display  = 'flex';
-  successSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-// ── Full reset ────────────────────────────────────────────────
 function resetUI() {
-  clearStepTimers();
-  resetAllSteps();
-  progressSection.style.display = 'none';
+  agentPanel.style.display     = 'none';
   successSection.style.display  = 'none';
   hideError();
   setLoading(false);
+  resetAgentPanel();
   validateForm();
-
-  if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
 }
 
-// ── Form submit ───────────────────────────────────────────────
+// ── Form Submit with Server-Sent Events (SSE) ────────────────
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   hideError();
@@ -161,28 +138,23 @@ form.addEventListener('submit', async (e) => {
   const aim              = aimInput.value.trim();
   const language         = langSelect.value;
 
-  if (!experimentNumber || experimentNumber < 1) {
-    showError('Please enter a valid experiment number (≥ 1).');
-    return;
-  }
-  if (!aim) {
-    showError('Please enter the experiment aim.');
-    return;
-  }
-  if (!language) {
-    showError('Please select a programming language.');
-    return;
-  }
+  if (!experimentNumber || experimentNumber < 1) return showError('Please enter a valid experiment number (≥ 1).');
+  if (!aim) return showError('Please enter the experiment aim.');
+  if (!language) return showError('Please select a programming language.');
 
   const codeInstructions   = codeInstInput.value.trim();
   const theoryInstructions = theoryInstInput.value.trim();
 
   setLoading(true);
-  showProgressCard();
-  startFakeProgress();
+  resetAgentPanel();
+  agentPanel.style.display = 'block';
+  successSection.style.display = 'none';
+  agentPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  appendTerminalLine(`(.venv) PS /app> python main.py --lang=${language}`, true);
 
   try {
-    const response = await fetch('/generate', {
+    const response = await fetch('/generate-stream', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
@@ -195,8 +167,6 @@ form.addEventListener('submit', async (e) => {
       }),
     });
 
-    clearStepTimers();
-
     if (!response.ok) {
       let detail = `Server error (${response.status})`;
       try {
@@ -206,26 +176,131 @@ form.addEventListener('submit', async (e) => {
       throw new Error(detail);
     }
 
-    const blob = await response.blob();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+
+      for (const chunk of parts) {
+        const line = chunk.trim();
+        if (!line.startsWith('data: ')) continue;
+        
+        try {
+          const payload = JSON.parse(line.substring(6));
+          handleAgentEvent(payload, experimentNumber);
+        } catch (err) {
+          console.error('Failed to parse SSE event:', err);
+        }
+      }
+    }
+
     setLoading(false);
-    showSuccessCard(blob, experimentNumber);
 
   } catch (err) {
-    clearStepTimers();
-
-    const activeIdx = steps.findIndex(s => s.classList.contains('active'));
-    if (activeIdx !== -1) setStepState(activeIdx, 's-error');
-
+    if (currentActiveStepId) setTimelineStep(currentActiveStepId, 'failed');
+    agentLiveBadge.className = 'agent-badge error';
+    agentLiveBadge.textContent = 'FAILED';
     setLoading(false);
-    showError(err.message || 'Something went wrong. Please try again.');
+    showError(err.message || 'Generation failed. Please try again.');
   }
 });
 
-// ── Reset button ──────────────────────────────────────────────
+// ── Event Router for Backend SSE Messages ─────────────────────
+function handleAgentEvent(payload, experimentNumber) {
+  const { type, message, timestamp, data } = payload;
+  if (message) {
+    agentStatusMsg.textContent = message;
+    appendLogLine(timestamp || '00:00:00', message);
+  }
+
+  switch (type) {
+    case 'agent_started':
+      setTimelineStep('step-task', 'running');
+      break;
+
+    case 'generating_code':
+      setTimelineStep('step-task', 'completed');
+      setTimelineStep('step-code', 'running');
+      break;
+
+    case 'code_generated':
+      setTimelineStep('step-code', 'completed');
+      if (data && data.code) {
+        codeText.textContent = data.code;
+      }
+      break;
+
+    case 'sandbox_starting':
+      setTimelineStep('step-sandbox', 'running');
+      break;
+
+    case 'execution_started':
+      setTimelineStep('step-sandbox', 'completed');
+      setTimelineStep('step-exec', 'running');
+      break;
+
+    case 'terminal_output':
+      if (data !== undefined) appendTerminalLine(String(data));
+      else if (message) appendTerminalLine(message);
+      break;
+
+    case 'execution_completed':
+      setTimelineStep('step-exec', 'completed');
+      setTimelineStep('step-playwright', 'running');
+      break;
+
+    case 'playwright_starting':
+      setTimelineStep('step-playwright', 'running');
+      break;
+
+    case 'browser_screenshot':
+      setTimelineStep('step-playwright', 'completed');
+      setTimelineStep('step-docx', 'running');
+      if (data && data.image) {
+        liveBrowserImg.src = `data:image/png;base64,${data.image}`;
+        browserPreviewCard.style.display = 'block';
+        browserPreviewCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      break;
+
+    case 'document_generation':
+      setTimelineStep('step-docx', 'running');
+      break;
+
+    case 'completed':
+      setTimelineStep('step-docx', 'completed');
+      agentLiveBadge.className = 'agent-badge success';
+      agentLiveBadge.textContent = 'DONE';
+      agentStatusMsg.textContent = 'Experiment generated successfully!';
+
+      if (data && data.download_url) {
+        downloadBtn.href = data.download_url;
+        downloadBtn.download = data.filename || `Experiment_${experimentNumber}.docx`;
+        successSection.style.display = 'flex';
+        successSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      break;
+
+    case 'error':
+      if (currentActiveStepId) setTimelineStep(currentActiveStepId, 'failed');
+      agentLiveBadge.className = 'agent-badge error';
+      agentLiveBadge.textContent = 'FAILED';
+      showError(message || 'An error occurred during execution.');
+      break;
+  }
+}
+
+// ── Reset Button ──────────────────────────────────────────────
 resetBtn.addEventListener('click', () => {
   resetUI();
   form.reset();
   charCount.textContent = '0 / 500';
-  document.querySelectorAll('.comp-card').forEach(c => c.classList.add('selected'));
   validateForm();
 });
