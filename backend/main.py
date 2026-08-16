@@ -362,12 +362,15 @@ async def generate_experiment_stream(req: GenerateRequest):
 
             # ── 3. Playwright Terminal Screenshot ─────────────────────────────
             yield _sse_event("playwright_starting", "Launching Playwright renderer...")
-            terminal_png = await asyncio.to_thread(render_terminal, output_text.strip(), req.language)
-            img_b64 = base64.b64encode(terminal_png).decode("utf-8")
-
-            yield _sse_event("browser_screenshot", "Captured high-res terminal screenshot preview", data={
-                "image": img_b64,
-            })
+            terminal_png = None
+            try:
+                terminal_png = await asyncio.to_thread(render_terminal, output_text.strip(), req.language)
+                img_b64 = base64.b64encode(terminal_png).decode("utf-8")
+                yield _sse_event("browser_screenshot", "Captured high-res terminal screenshot preview", data={
+                    "image": img_b64,
+                })
+            except Exception as exc:
+                yield _sse_event("terminal_output", f"\n[Notice] Terminal screenshot renderer timed out. Proceeding with document creation...\n")
             await asyncio.sleep(0.2)
 
             # ── 4. Assemble Word DOCX ─────────────────────────────────────────

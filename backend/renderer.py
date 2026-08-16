@@ -80,10 +80,10 @@ def _take_screenshot(html: str) -> bytes:
                 device_scale_factor=1,
             )
             page = context.new_page()
-            page.set_content(html, wait_until="load")
+            page.set_content(html, wait_until="domcontentloaded", timeout=10000)
 
             terminal = page.locator("#terminal")
-            png_bytes = terminal.screenshot()
+            png_bytes = terminal.screenshot(timeout=10000)
 
             context.close()   # free page memory; browser stays alive
             return png_bytes
@@ -112,7 +112,10 @@ def warmup_browser() -> None:
     Pre-launch Chromium on the playwright thread at server startup.
     Call this from the FastAPI lifespan so the first user never waits.
     """
-    _playwright_executor.submit(_init_browser).result(timeout=60)
+    try:
+        _playwright_executor.submit(_init_browser).result(timeout=15)
+    except Exception:
+        pass
 
 
 def _escape_html(text: str) -> str:
@@ -131,7 +134,7 @@ def render_terminal(output: str, language: str = "Python") -> bytes:
     Render captured stdout into a terminal-style PNG.
 
     Submits the screenshot work to the dedicated playwright thread
-    and blocks until the result is ready (max 60 seconds).
+    and blocks until the result is ready (max 15 seconds).
 
     Args:
         output:   Text to display (stdout from code execution).
@@ -151,6 +154,6 @@ def render_terminal(output: str, language: str = "Python") -> bytes:
         .replace("{{OUTPUT}}", _escape_html(cleaned_output))
     )
 
-    # Submit to the single playwright thread and wait for the result
+    # Submit to the single playwright thread and wait for the result (max 15s)
     future = _playwright_executor.submit(_take_screenshot, html)
-    return future.result(timeout=60)
+    return future.result(timeout=15)
