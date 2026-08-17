@@ -267,11 +267,16 @@ def run_code(code: str, language: str) -> dict:
         if config.get("exe_name"):
             run_cmd[0] = os.path.join(tmp_dir, config["exe_name"])
 
+        run_env = os.environ.copy()
+        run_env["MPLCONFIGDIR"] = tmp_dir
+        run_env["FC_CACHEDIR"]  = tmp_dir
+
         run_kwargs: dict = {
             "cwd":            tmp_dir,
             "capture_output": True,
             "text":           True,
             "timeout":        RUN_TIMEOUT,
+            "env":            run_env,
         }
         if sys.platform.startswith("linux"):
             try:
@@ -424,12 +429,17 @@ def run_code_stream(code: str, language: str):
         if config.get("exe_name"):
             run_cmd[0] = os.path.join(tmp_dir, config["exe_name"])
 
+        run_env = os.environ.copy()
+        run_env["MPLCONFIGDIR"] = tmp_dir
+        run_env["FC_CACHEDIR"]  = tmp_dir
+
         run_kwargs: dict = {
             "cwd": tmp_dir,
             "stdout": subprocess.PIPE,
             "stderr": subprocess.STDOUT,
             "text": True,
             "bufsize": 1,
+            "env": run_env,
         }
         if sys.platform.startswith("linux"):
             try:

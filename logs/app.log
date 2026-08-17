@@ -1,0 +1,14 @@
+[2026-08-16 10:40:37] [INFO] [labgen.main]: Server starting up. Warming up Chromium browser...
+[2026-08-16 10:40:37] [INFO] [labgen.renderer]: Launching headless Chromium browser instance...
+[2026-08-16 10:40:38] [INFO] [labgen.renderer]: Headless Chromium browser launched successfully.
+[2026-08-16 10:40:38] [INFO] [labgen.main]: Chromium warmup completed. Server is ready to process requests.
+[2026-08-16 10:41:39] [INFO] [labgen.main]: POST /generate-stream — Exp #1, language='Python', aim='Write a Python program to implement K-Means Cluste...'
+[2026-08-16 10:41:39] [INFO] [labgen.generator]: Generating content for language='Python', aim='Write a Python program to implement K-Means Cluste...' (using custom user API key)
+[2026-08-16 10:41:42] [INFO] [labgen.generator]: Gemini content generation completed in 2.91s
+[2026-08-16 10:42:15] [INFO] [labgen.main]: Exp #1 generated successfully! File ID: 47fa9733-1585-44ac-b81d-dfe6a6c07d9e, size: 53455 bytes
+[2026-08-16 10:42:30] [INFO] [labgen.main]: GET /download/47fa9733-1585-44ac-b81d-dfe6a6c07d9e — Serving file 'Experiment_1.docx' (53455 bytes)
+[2026-08-16 10:43:00] [INFO] [labgen.main]: POST /generate-stream — Exp #1, language='Python', aim='Write a Python program to implement K-Means Cluste...'
+[2026-08-16 10:43:00] [INFO] [labgen.generator]: Generating content for language='Python', aim='Write a Python program to implement K-Means Cluste...' (using custom user API key)
+[2026-08-16 10:43:04] [INFO] [labgen.generator]: Gemini content generation completed in 3.25s
+[2026-08-16 10:43:13] [INFO] [labgen.main]: Exp #1 generated successfully! File ID: 5c44fd9d-a0e5-4cdd-8131-92528bda3146, size: 96595 bytes
+[2026-08-16 10:43:17] [INFO] [labgen.main]: GET /download/5c44fd9d-a0e5-4cdd-8131-92528bda3146 — Serving file 'Experiment_1.docx' (96595 bytes)
