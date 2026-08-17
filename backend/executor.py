@@ -151,6 +151,20 @@ def _detect_dangerous_code(code: str) -> str | None:
     return None
 
 
+def _filter_system_warnings(text: str) -> str:
+    """Filter out OS / C-level library warnings (e.g. Fontconfig cache notices)."""
+    if not text:
+        return ""
+    lines = text.splitlines()
+    filtered = [
+        line for line in lines
+        if not line.startswith("Fontconfig error:")
+        and "Permission denied: '/root" not in line
+        and "Matplotlib created a temporary cache" not in line
+    ]
+    return "\n".join(filtered).strip()
+
+
 def run_code(code: str, language: str) -> dict:
     """
     Execute *code* in a temporary directory and return stdout/stderr.
@@ -268,8 +282,11 @@ def run_code(code: str, language: str) -> dict:
             run_cmd[0] = os.path.join(tmp_dir, config["exe_name"])
 
         run_env = os.environ.copy()
-        run_env["MPLCONFIGDIR"] = tmp_dir
-        run_env["FC_CACHEDIR"]  = tmp_dir
+        run_env["HOME"]            = tmp_dir
+        run_env["XDG_CACHE_HOME"]  = tmp_dir
+        run_env["XDG_CONFIG_HOME"] = tmp_dir
+        run_env["MPLCONFIGDIR"]    = tmp_dir
+        run_env["FC_CACHEDIR"]     = tmp_dir
 
         run_kwargs: dict = {
             "cwd":            tmp_dir,
@@ -297,8 +314,8 @@ def run_code(code: str, language: str) -> dict:
                 f"Make sure it is installed and on your PATH.",
             }
 
-        stdout = run_result.stdout.strip()
-        stderr = run_result.stderr.strip()
+        stdout = _filter_system_warnings(run_result.stdout)
+        stderr = _filter_system_warnings(run_result.stderr)
 
         # Some programs write to stderr for warnings but still succeed
         # Only treat as error if the exit code is non-zero
@@ -430,8 +447,11 @@ def run_code_stream(code: str, language: str):
             run_cmd[0] = os.path.join(tmp_dir, config["exe_name"])
 
         run_env = os.environ.copy()
-        run_env["MPLCONFIGDIR"] = tmp_dir
-        run_env["FC_CACHEDIR"]  = tmp_dir
+        run_env["HOME"]            = tmp_dir
+        run_env["XDG_CACHE_HOME"]  = tmp_dir
+        run_env["XDG_CONFIG_HOME"] = tmp_dir
+        run_env["MPLCONFIGDIR"]    = tmp_dir
+        run_env["FC_CACHEDIR"]     = tmp_dir
 
         run_kwargs: dict = {
             "cwd": tmp_dir,
@@ -455,6 +475,8 @@ def run_code_stream(code: str, language: str):
         try:
             process = subprocess.Popen(run_cmd, **run_kwargs)
             for line in process.stdout:
+                if line.startswith("Fontconfig error:") or "Permission denied: '/root" in line:
+                    continue
                 full_output.append(line)
                 yield {"type": "stdout", "text": line}
             process.wait(timeout=RUN_TIMEOUT)
