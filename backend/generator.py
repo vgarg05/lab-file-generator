@@ -20,7 +20,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
 
 # Model for structured JSON output (theory + code together)
 _json_model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+    model_name="gemini-3.1-flash",
     generation_config=genai.types.GenerationConfig(
         response_mime_type="application/json",
         temperature=0.3,
@@ -29,7 +29,7 @@ _json_model = genai.GenerativeModel(
 
 # Plain model for code fixing (no JSON mode needed)
 _plain_model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+    model_name="gemini-3.1-flash",
     generation_config=genai.types.GenerationConfig(
         temperature=0.2,
     ),
@@ -59,7 +59,7 @@ def generate_theory_and_code(
         import google.generativeai as _genai
         _genai.configure(api_key=api_key)
         json_model = _genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-3.1-flash",
             generation_config=_genai.types.GenerationConfig(
                 response_mime_type="application/json",
                 temperature=0.3,
